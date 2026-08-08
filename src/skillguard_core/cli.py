@@ -45,7 +45,7 @@ def scan(
     service = ScanService(engines=_engines(), reviewer=build_reviewer())
     try:
         report = service.scan_target(target, use_llm=use_llm)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(3)
     if sarif:

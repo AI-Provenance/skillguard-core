@@ -29,7 +29,7 @@ def truncate_evidence(text: str | None, limit: int = 400) -> str:
 
 
 def make_fingerprint(engine: str, rule_id: str, file_path: str, title: str) -> str:
-    raw = "|".join([engine, rule_id, file_path, title])
+    raw = f"{engine}|{rule_id}|{file_path}|{title}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 

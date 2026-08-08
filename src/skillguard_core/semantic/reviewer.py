@@ -67,7 +67,7 @@ def build_reviewer(model: str | None = None, agent=None):
     def review(path: Path, results: list[EngineResult]) -> ReviewDecision | None:
         try:
             state = agent.invoke({"messages": [{"role": "user", "content": summarize(path, results)}]})
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
         decision = state.get("structured_response")
         return decision if isinstance(decision, ReviewDecision) else None
