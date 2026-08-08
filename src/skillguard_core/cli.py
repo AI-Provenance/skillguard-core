@@ -39,6 +39,9 @@ def scan(
     sarif: bool = typer.Option(False, "--sarif"),
 ) -> None:
     """Scan a skill directory, git URL, or zip URL."""
+    if json_output and sarif:
+        typer.echo("error: --json and --sarif are mutually exclusive", err=True)
+        raise typer.Exit(3)
     service = ScanService(engines=_engines(), reviewer=build_reviewer())
     try:
         report = service.scan_target(target, use_llm=use_llm)

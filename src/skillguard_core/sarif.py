@@ -10,11 +10,12 @@ def to_sarif(report: ScanReport) -> dict:
         rule_key = f"{f.engine}/{f.rule_id}"
         if rule_key not in rules:
             rules[rule_key] = {"id": rule_key, "shortDescription": {"text": f.title or rule_key}}
+        location = {"physicalLocation": {"artifactLocation": {"uri": f.file_path}}} if f.file_path else {}
         results.append({
             "ruleId": rule_key,
             "level": LEVELS.get(f.severity, "warning"),
             "message": {"text": f.title or rule_key},
-            "locations": [{"physicalLocation": {"artifactLocation": {"uri": f.file_path or "SKILL.md"}}}],
+            **({"locations": [location]} if location else {}),
         })
     return {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
