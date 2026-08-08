@@ -24,7 +24,7 @@ class Fetched:
 
 def content_hash(root: Path) -> str:
     digest = hashlib.sha256()
-    for file_path in sorted(p for p in root.rglob("*") if p.is_file()):
+    for file_path in sorted(p for p in root.rglob("*") if p.is_file() and not p.is_symlink()):
         rel = file_path.relative_to(root).as_posix()
         file_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()
         digest.update(f"{rel}:{file_hash}\n".encode())
