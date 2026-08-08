@@ -1,0 +1,35 @@
+name: "SkillGuard Scan"
+description: "Scan AI agent skills for security risks (skillguard-core)"
+inputs:
+  path:
+    description: "Skill directory to scan"
+    required: false
+    default: "."
+  fail-on:
+    description: "Fail threshold: caution or dangerous"
+    required: false
+    default: "dangerous"
+runs:
+  using: "composite"
+  steps:
+    - name: Install skillguard
+      run: pipx install skillguard-core
+      shell: bash
+    - name: Scan
+      id: scan
+      run: |
+        set +e
+        skillguard scan "${{ inputs.path }}" --sarif > "$GITHUB_WORKSPACE/skillguard.sarif"
+        code=$?
+        set -e
+        echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+        if [ "${{ inputs.fail-on }}" = "caution" ] && [ "$code" -ge 1 ]; then exit 1; fi
+        if [ "${{ inputs.fail-on }}" = "dangerous" ] && [ "$code" -ge 2 ]; then exit 1; fi
+        exit 0
+      shell: bash
+    - name: Upload SARIF
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: skillguard-sarif
+        path: skillguard.sarif
