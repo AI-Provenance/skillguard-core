@@ -47,19 +47,22 @@ class SkillspectorEngine:
 
     def _parse(self, data: dict, started: float) -> EngineResult:
         findings: list[EngineFinding] = []
-        for f in data.get("findings") or []:
+        items = data.get("issues") or data.get("findings") or []
+        for f in items:
+            loc = f.get("location") or {}
             finding = EngineFinding(
                 engine=self.name,
                 rule_id=str(f.get("rule_id") or f.get("id") or ""),
                 category=str(f.get("category") or ""),
-                title=str(f.get("title") or f.get("description") or ""),
+                title=str(f.get("title") or f.get("pattern") or f.get("finding") or f.get("description") or ""),
                 severity=normalize_severity(f.get("severity")),
-                file_path=str(f.get("file") or f.get("path") or ""),
-                evidence=truncate_evidence(f.get("snippet") or f.get("evidence")),
+                file_path=str(f.get("file") or loc.get("file") or f.get("path") or ""),
+                evidence=truncate_evidence(f.get("snippet") or f.get("code_snippet") or f.get("evidence") or f.get("finding")),
             )
             finding.fingerprint = make_fingerprint(self.name, finding.rule_id, finding.file_path, finding.title)
             findings.append(finding)
-        score = data.get("risk_score")
+        risk = data.get("risk_assessment") or {}
+        score = data.get("risk_score") or risk.get("score")
         return EngineResult(
             engine=self.name,
             score=int(score) if score is not None else None,
