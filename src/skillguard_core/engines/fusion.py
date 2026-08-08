@@ -17,7 +17,7 @@ def engine_score(result: EngineResult) -> int:
     if result.score is not None:
         return max(0, min(100, result.score))
     if result.findings:
-        return max(SEVERITY_SCORES[f.severity] for f in result.findings)
+        return max(SEVERITY_SCORES.get(f.severity, 0) for f in result.findings)
     return 0
 
 
