@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "58d0147d11371d02e6e430791ede44b896b6ae34",
+  "prompts": {},
+  "humans": {
+    "h_d1a0ff36e5926f": {
+      "author": "Shahriyar Rzayev"
+    }
+  }
+}
