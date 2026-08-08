@@ -1,0 +1,8 @@
+{
+  "policy": "balanced",
+  "result": "fail",
+  "findings": [
+    {"id": "CS-EXFIL-001", "severity": "high", "title": "Credential file access", "path": "SKILL.md"},
+    {"id": "CS-INJ-002", "severity": "medium", "title": "Instruction override pattern", "path": "SKILL.md"}
+  ]
+}
