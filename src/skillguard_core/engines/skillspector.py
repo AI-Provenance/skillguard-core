@@ -34,10 +34,15 @@ class SkillspectorEngine:
                 proc = self.runner(cmd, capture_output=True, text=True, timeout=self.timeout_s)
             except subprocess.TimeoutExpired:
                 return EngineResult(engine=self.name, error=f"timeout after {self.timeout_s}s", duration_ms=self._ms(started))
+            except OSError as exc:
+                return EngineResult(engine=self.name, error=f"runner failed: {exc}", duration_ms=self._ms(started))
             if not report_path.exists():
                 tail = (proc.stderr or proc.stdout or "").strip()[-2000:]
                 return EngineResult(engine=self.name, error=f"no report produced: {tail}", duration_ms=self._ms(started))
-            data = json.loads(report_path.read_text())
+            try:
+                data = json.loads(report_path.read_text())
+            except (json.JSONDecodeError, OSError) as exc:
+                return EngineResult(engine=self.name, error=f"cannot read report: {exc}", duration_ms=self._ms(started))
         return self._parse(data, started)
 
     def _parse(self, data: dict, started: float) -> EngineResult:
