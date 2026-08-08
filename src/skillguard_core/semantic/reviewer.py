@@ -1,6 +1,11 @@
 from pathlib import Path
 from typing import Literal
-
+from deepagents import (
+            GeneralPurposeSubagentProfile,
+            HarnessProfile,
+            create_deep_agent,
+            register_harness_profile,
+        )
 from pydantic import BaseModel, Field
 
 from skillguard_core.config import get_settings
@@ -43,12 +48,6 @@ def build_reviewer(model: str | None = None, agent=None):
     if agent is None:
         if not settings.anthropic_api_key:
             return None
-        from deepagents import (
-            GeneralPurposeSubagentProfile,
-            HarnessProfile,
-            create_deep_agent,
-            register_harness_profile,
-        )
 
         model_key = f"anthropic:{model or settings.semantic_model}"
         register_harness_profile(
