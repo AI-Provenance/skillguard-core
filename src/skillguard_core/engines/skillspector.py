@@ -47,7 +47,7 @@ class SkillspectorEngine:
 
     def _parse(self, data: dict, started: float) -> EngineResult:
         findings: list[EngineFinding] = []
-        for f in data.get("findings", []):
+        for f in data.get("findings") or []:
             finding = EngineFinding(
                 engine=self.name,
                 rule_id=str(f.get("rule_id") or f.get("id") or ""),
