@@ -12,7 +12,7 @@ from skillguard_core.engines.cisco import CiscoScannerEngine
 from skillguard_core.engines.skillspector import SkillspectorEngine
 from skillguard_core.ingest.fetcher import discover_skills
 from skillguard_core.pipeline.scan import ScanReport, ScanService
-from skillguard_core.sarif import to_sarif
+from skillguard_core.sarif import to_sarif, to_sarif_batch
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -81,7 +81,10 @@ def scan(
             except Exception as exc:  # noqa: BLE001
                 typer.echo(f"error: {exc}", err=True)
                 raise typer.Exit(3)
-            typer.echo(json.dumps([asdict(r) if json_output else to_sarif(r) for r in reports], indent=2))
+            if json_output:
+                typer.echo(json.dumps([asdict(r) for r in reports], indent=2))
+            else:
+                typer.echo(json.dumps(to_sarif_batch(reports), indent=2))
             raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
         skill_dirs = discover_skills(Path(target))
