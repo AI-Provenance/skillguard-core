@@ -1,0 +1,16 @@
+README.md
+  h_0dcc239529895a 65,109
+action.yml
+  h_0dcc239529895a 15-18,29-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f604173d427d344e0bd94858d2cf5f3d1b08475e",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
