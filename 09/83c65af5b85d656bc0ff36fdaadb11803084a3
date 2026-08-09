@@ -1,0 +1,16 @@
+src/skillguard_core/ingest/fetcher.py
+  h_0dcc239529895a 49-59
+tests/ingest/test_fetcher.py
+  h_0dcc239529895a 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0983c65af5b85d656bc0ff36fdaadb11803084a3",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
