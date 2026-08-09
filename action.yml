@@ -12,6 +12,10 @@ inputs:
     description: "Fail threshold: caution or dangerous"
     required: false
     default: "dangerous"
+  workers:
+    description: "Number of parallel scan workers (default: CPU count)"
+    required: false
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -22,7 +26,9 @@ runs:
       id: scan
       run: |
         set +e
-        skillguard scan "${{ inputs.path }}" --sarif > "${{ github.workspace }}/skillguard.sarif"
+        WORKERS_FLAG=""
+        if [ -n "${{ inputs.workers }}" ]; then WORKERS_FLAG="--workers ${{ inputs.workers }}"; fi
+        skillguard scan "${{ inputs.path }}" --sarif $WORKERS_FLAG > "${{ github.workspace }}/skillguard.sarif"
         code=$?
         set -e
         echo "exit_code=$code" >> "$GITHUB_OUTPUT"

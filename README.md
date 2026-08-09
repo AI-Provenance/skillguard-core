@@ -62,6 +62,7 @@ skillguard scan ./my-skill --sarif         # SARIF 2.1.0
 # Directory of skills (batch)
 skillguard scan ./skills                   # progress bar + summary
 skillguard scan ./skills -v                # verbose: stream results as they complete
+skillguard scan ./skills -w 8              # 8 parallel workers (default: CPU count)
 
 # LLM review (second opinion on caution/dangerous verdicts)
 skillguard scan ./my-skill --use-llm       # needs ANTHROPIC_API_KEY or LLM_API_KEY+LLM_BASE_URL
@@ -105,6 +106,7 @@ jobs:
         with:
           path: skills/
           fail-on: dangerous    # or "caution" to fail on any warning
+          workers: "8"           # parallel workers (default: CPU count)
 
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
