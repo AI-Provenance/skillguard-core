@@ -3,14 +3,6 @@ import logging
 from pathlib import Path
 from typing import Literal
 
-from deepagents import (
-    GeneralPurposeSubagentProfile,
-    HarnessProfile,
-    create_deep_agent,
-    register_harness_profile,
-)
-from deepagents._models import get_model_identifier, get_model_provider
-from langchain.chat_models import init_chat_model
 from pydantic import BaseModel, Field
 
 from skillguard_core.config import get_settings
@@ -31,11 +23,6 @@ JSON_FORMAT_INSTRUCTION = (
     "\n\nRespond with a JSON object matching this schema. "
     'Return ONLY the JSON, no other text:\n'
     '{"verdict": "<safe|caution|dangerous>", "confidence": <0.0-1.0>, "rationale": "<brief explanation>"}'
-)
-
-_SLIM_PROFILE = HarnessProfile(
-    general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
-    excluded_tools=frozenset({"ls", "read_file", "write_file", "edit_file", "delete", "glob", "grep"}),
 )
 
 
@@ -87,21 +74,35 @@ def _parse_json_response(content: str) -> ReviewDecision | None:
 
 
 def _make_agent(model_name: str, api_key: str, base_url: str = ""):
+    from deepagents import (
+        GeneralPurposeSubagentProfile,
+        HarnessProfile,
+        create_deep_agent,
+        register_harness_profile,
+    )
+
+    slim_profile = HarnessProfile(
+        general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
+        excluded_tools=frozenset({"ls", "read_file", "write_file", "edit_file", "delete", "glob", "grep"}),
+    )
     if base_url:
+        from langchain.chat_models import init_chat_model
+
         chat_model = init_chat_model(model=model_name, base_url=base_url, api_key=api_key, temperature=0)
+        from deepagents._models import get_model_identifier, get_model_provider
 
         provider = get_model_provider(chat_model)
         identifier = get_model_identifier(chat_model)
         if provider:
-            register_harness_profile(provider, _SLIM_PROFILE)
+            register_harness_profile(provider, slim_profile)
         if provider and identifier and ":" not in identifier:
-            register_harness_profile(f"{provider}:{identifier}", _SLIM_PROFILE)
+            register_harness_profile(f"{provider}:{identifier}", slim_profile)
         return create_deep_agent(
             model=chat_model,
             system_prompt=SYSTEM_PROMPT + JSON_FORMAT_INSTRUCTION,
         )
     model_key = f"anthropic:{model_name}"
-    register_harness_profile(model_key, _SLIM_PROFILE)
+    register_harness_profile(model_key, slim_profile)
     return create_deep_agent(
         model=model_key,
         system_prompt=SYSTEM_PROMPT,
