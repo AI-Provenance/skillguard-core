@@ -1,6 +1,8 @@
 import json
+import os
 import sys
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from pathlib import Path
 
@@ -67,6 +69,7 @@ def scan(
     json_output: bool = typer.Option(False, "--json"),
     sarif: bool = typer.Option(False, "--sarif"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream results as each skill is scanned"),
+    workers: int = typer.Option(os.cpu_count() or 1, "--workers", "-w", help="Parallel scan workers (default: CPU count)"),
 ) -> None:
     """Scan a skill directory, git URL, or zip URL."""
     if json_output and sarif:
@@ -77,7 +80,7 @@ def scan(
     if _is_skills_dir(target):
         if json_output or sarif:
             try:
-                reports = service.scan_directory(target, use_llm=use_llm)
+                reports = service.scan_directory(target, use_llm=use_llm, max_workers=workers)
             except Exception as exc:  # noqa: BLE001
                 typer.echo(f"error: {exc}", err=True)
                 raise typer.Exit(3)
@@ -88,25 +91,21 @@ def scan(
             raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
         skill_dirs = discover_skills(Path(target))
-        reports: list[ScanReport] = []
-        with tqdm.tqdm(total=len(skill_dirs), unit="skill", file=sys.stderr) as pbar:
-            for d in skill_dirs:
-                try:
-                    report = service.scan_target(str(d.path), use_llm=use_llm)
-                except Exception as exc:  # noqa: BLE001
-                    typer.echo(f"error: {exc}", err=True)
-                    report = ScanReport(
-                        skill_name=d.path.name, origin="local", source_url="", version_ref="",
-                        content_hash="", engines=[], fused_score=0, severity="unknown",
-                        verdict="inconclusive", llm_skipped_reason=str(exc),
-                    )
-                reports.append(report)
+        results: dict[int, ScanReport] = {}
+        with tqdm.tqdm(total=len(skill_dirs), unit="skill", file=sys.stderr) as pbar, \
+                ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(service.scan_target, str(d.path), use_llm=use_llm): i for i, d in enumerate(skill_dirs)}
+            for future in as_completed(futures):
+                idx = futures[future]
+                report = _safe_scan(future, skill_dirs[idx])
+                results[idx] = report
                 tag = _verdict_tag(report.verdict)
                 pbar.set_description(f"{tag} {report.skill_name}")
                 if verbose:
                     tqdm.tqdm.write(_format_report(report, False, False), file=sys.stderr)
                     tqdm.tqdm.write("", file=sys.stderr)
                 pbar.update(1)
+        reports = [results[i] for i in range(len(skill_dirs))]
         _print_summary(reports)
         raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
@@ -117,6 +116,17 @@ def scan(
         raise typer.Exit(3)
     typer.echo(_format_report(report, json_output, sarif))
     raise typer.Exit(EXIT_CODES.get(report.verdict, 3))
+
+
+def _safe_scan(future, d) -> ScanReport:
+    try:
+        return future.result()
+    except Exception as exc:  # noqa: BLE001
+        return ScanReport(
+            skill_name=d.name, origin="local", source_url="", version_ref="",
+            content_hash="", engines=[], fused_score=0, severity="unknown",
+            verdict="inconclusive", llm_skipped_reason=str(exc),
+        )
 
 
 def _verdict_tag(verdict: str) -> str:

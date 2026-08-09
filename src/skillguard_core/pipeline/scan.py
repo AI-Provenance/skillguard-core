@@ -2,6 +2,7 @@ import re
 import shutil
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -74,9 +75,17 @@ class ScanService:
                 root = fetched.path.parent if fetched.path.parent != tmp_root else fetched.path
                 shutil.rmtree(root, ignore_errors=True)
 
-    def scan_directory(self, target: str, *, use_llm: bool = False) -> list[ScanReport]:
+    def scan_directory(self, target: str, *, use_llm: bool = False, max_workers: int = 1) -> list[ScanReport]:
         skill_dirs = discover_skills(Path(target))
-        return [self.scan_target(str(d.path), use_llm=use_llm) for d in skill_dirs]
+        if max_workers <= 1 or len(skill_dirs) <= 1:
+            return [self.scan_target(str(d.path), use_llm=use_llm) for d in skill_dirs]
+        results: dict[int, ScanReport] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(self.scan_target, str(d.path), use_llm=use_llm): i for i, d in enumerate(skill_dirs)}
+            for future in as_completed(futures):
+                idx = futures[future]
+                results[idx] = future.result()
+        return [results[i] for i in range(len(skill_dirs))]
 
     def scan_fetched(self, fetched: Fetched, *, use_llm: bool = False) -> ScanReport:
         settings = get_settings()
