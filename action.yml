@@ -1,5 +1,8 @@
 name: "SkillGuard Scan"
-description: "Scan AI agent skills for security risks (skillguard-core)"
+description: "Scan AI agent skills for security risks"
+branding:
+  icon: shield
+  color: red
 inputs:
   path:
     description: "Skill directory to scan"
@@ -13,13 +16,13 @@ runs:
   using: "composite"
   steps:
     - name: Install skillguard
-      run: pipx install skillguard-core
+      run: pipx install "${{ github.action_path }}"
       shell: bash
     - name: Scan
       id: scan
       run: |
         set +e
-        skillguard scan "${{ inputs.path }}" --sarif > "$GITHUB_WORKSPACE/skillguard.sarif"
+        skillguard scan "${{ inputs.path }}" --sarif > "${{ github.workspace }}/skillguard.sarif"
         code=$?
         set -e
         echo "exit_code=$code" >> "$GITHUB_OUTPUT"
