@@ -1352,6 +1352,7 @@ dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "tqdm" },
     { name = "typer" },
 ]
 
@@ -1390,6 +1391,7 @@ requires-dist = [
     { name = "pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+    { name = "tqdm", specifier = ">=4.66" },
     { name = "typer", specifier = ">=0.12" },
 ]
 provides-extras = ["ai", "dev"]

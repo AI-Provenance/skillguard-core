@@ -4,11 +4,13 @@ from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
 
+import tqdm
 import typer
 
 from skillguard_core.config import get_settings
 from skillguard_core.engines.cisco import CiscoScannerEngine
 from skillguard_core.engines.skillspector import SkillspectorEngine
+from skillguard_core.ingest.fetcher import discover_skills
 from skillguard_core.pipeline.scan import ScanReport, ScanService
 from skillguard_core.sarif import to_sarif
 from skillguard_core.semantic.reviewer import build_reviewer
@@ -74,17 +76,36 @@ def scan(
     service = ScanService(engines=_engines(), reviewer=build_reviewer())
 
     if _is_skills_dir(target):
-        show_progress = not json_output and not sarif
-        on_report = _make_progress_callback(verbose) if show_progress else None
-        try:
-            reports = service.scan_directory(target, use_llm=use_llm, on_report=on_report)
-        except Exception as exc:  # noqa: BLE001
-            typer.echo(f"error: {exc}", err=True)
-            raise typer.Exit(3)
         if json_output or sarif:
+            try:
+                reports = service.scan_directory(target, use_llm=use_llm)
+            except Exception as exc:  # noqa: BLE001
+                typer.echo(f"error: {exc}", err=True)
+                raise typer.Exit(3)
             typer.echo(json.dumps([asdict(r) if json_output else to_sarif(r) for r in reports], indent=2))
-        else:
-            _print_summary(reports)
+            raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
+
+        skill_dirs = discover_skills(Path(target))
+        reports: list[ScanReport] = []
+        with tqdm.tqdm(total=len(skill_dirs), unit="skill", file=sys.stderr) as pbar:
+            for d in skill_dirs:
+                try:
+                    report = service.scan_target(str(d.path), use_llm=use_llm)
+                except Exception as exc:  # noqa: BLE001
+                    typer.echo(f"error: {exc}", err=True)
+                    report = ScanReport(
+                        skill_name=d.path.name, origin="local", source_url="", version_ref="",
+                        content_hash="", engines=[], fused_score=0, severity="unknown",
+                        verdict="inconclusive", llm_skipped_reason=str(exc),
+                    )
+                reports.append(report)
+                tag = _verdict_tag(report.verdict)
+                pbar.set_description(f"{tag} {report.skill_name}")
+                if verbose:
+                    tqdm.tqdm.write(_format_report(report, False, False), file=sys.stderr)
+                    tqdm.tqdm.write("", file=sys.stderr)
+                pbar.update(1)
+        _print_summary(reports)
         raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
     try:
@@ -96,39 +117,9 @@ def scan(
     raise typer.Exit(EXIT_CODES.get(report.verdict, 3))
 
 
-def _make_progress_callback(verbose: bool):
-    bar_width = 30
-    overwrite = sys.stderr.isatty()
-    line_end = "\r" if overwrite else "\n"
-
-    def on_report(report: ScanReport, idx: int, total: int):
-        filled = int(bar_width * idx / total)
-        bar = "[" + "#" * filled + " " * (bar_width - filled) + "]"
-        tag = _verdict_tag(report.verdict)
-        sys.stderr.write(f"{line_end}{bar} {idx}/{total}  {tag} {report.skill_name}")
-        sys.stderr.flush()
-        if verbose:
-            sys.stderr.write("\n")
-            _print_single(report)
-        if idx == total and not verbose:
-            sys.stderr.write("\n\n")
-            sys.stderr.flush()
-
-    return on_report
-
-
 def _verdict_tag(verdict: str) -> str:
     tags = {"dangerous": "⚠ ", "caution": "⚡", "safe": "✓ ", "inconclusive": "? "}
     return tags.get(verdict, "  ")
-
-
-def _print_single(report: ScanReport):
-    typer.echo(f"  {report.skill_name}: {report.verdict.upper()} (score {report.fused_score})")
-    if report.llm_reviewed:
-        typer.echo(f"    [llm] ({report.llm_confidence:.0%}) {report.llm_rationale}")
-    for f in report.findings:
-        level = f.severity[:4].upper()
-        typer.echo(f"    [{level}] {f.engine}/{f.rule_id}: {f.title}")
 
 
 def _print_summary(reports: list[ScanReport]):

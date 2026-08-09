@@ -2,7 +2,6 @@ import re
 import shutil
 import tempfile
 import time
-from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -75,16 +74,9 @@ class ScanService:
                 root = fetched.path.parent if fetched.path.parent != tmp_root else fetched.path
                 shutil.rmtree(root, ignore_errors=True)
 
-    def scan_directory(self, target: str, *, use_llm: bool = False, on_report: Callable[["ScanReport", int, int], None] | None = None) -> list[ScanReport]:
+    def scan_directory(self, target: str, *, use_llm: bool = False) -> list[ScanReport]:
         skill_dirs = discover_skills(Path(target))
-        reports: list[ScanReport] = []
-        total = len(skill_dirs)
-        for i, d in enumerate(skill_dirs, 1):
-            report = self.scan_target(str(d.path), use_llm=use_llm)
-            reports.append(report)
-            if on_report:
-                on_report(report, i, total)
-        return reports
+        return [self.scan_target(str(d.path), use_llm=use_llm) for d in skill_dirs]
 
     def scan_fetched(self, fetched: Fetched, *, use_llm: bool = False) -> ScanReport:
         settings = get_settings()
