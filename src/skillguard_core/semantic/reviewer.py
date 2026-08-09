@@ -32,6 +32,11 @@ JSON_FORMAT_INSTRUCTION = (
     '{"verdict": "<safe|caution|dangerous>", "confidence": <0.0-1.0>, "rationale": "<brief explanation>"}'
 )
 
+_SLIM_PROFILE = HarnessProfile(
+    general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
+    excluded_tools=frozenset({"ls", "read_file", "write_file", "edit_file", "delete", "glob", "grep"}),
+)
+
 
 class ReviewDecision(BaseModel):
     verdict: Literal["safe", "caution", "dangerous"] = Field(description="Final install verdict")
@@ -80,53 +85,28 @@ def _parse_json_response(content: str) -> ReviewDecision | None:
         return None
 
 
+def _make_agent(model_name: str, api_key: str, base_url: str = ""):
+    if base_url:
+        return create_deep_agent(
+            model=init_chat_model(model=model_name, base_url=base_url, api_key=api_key, temperature=0),
+            system_prompt=SYSTEM_PROMPT + JSON_FORMAT_INSTRUCTION,
+        )
+    model_key = f"anthropic:{model_name}"
+    register_harness_profile(model_key, _SLIM_PROFILE)
+    return create_deep_agent(
+        model=model_key,
+        system_prompt=SYSTEM_PROMPT,
+        response_format=ReviewDecision,
+    )
+
+
 def build_reviewer(model: str | None = None, agent=None):
-    settings = get_settings()
     if agent is None:
+        settings = get_settings()
         api_key = settings.anthropic_api_key or settings.llm_api_key
         if not api_key:
             return None
-
-        model_name = model or settings.semantic_model
-        if settings.llm_base_url:
-            chat_model = init_chat_model(
-                model=model_name,
-                base_url=settings.llm_base_url,
-                api_key=api_key,
-                temperature=0,
-            )
-            agent = create_deep_agent(
-                model=chat_model,
-                system_prompt=SYSTEM_PROMPT + JSON_FORMAT_INSTRUCTION,
-            )
-
-            def review(path: Path, results: list[EngineResult]) -> ReviewDecision | None:
-                try:
-                    state = agent.invoke({"messages": [{"role": "user", "content": summarize(path, results)}]})
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("LLM review failed: %s", exc)
-                    return None
-                messages = state.get("messages", [])
-                if not messages:
-                    return None
-                content = str(messages[-1].content) if hasattr(messages[-1], "content") else str(messages[-1])
-                return _parse_json_response(content)
-
-            return review
-        else:
-            model_key = f"anthropic:{model_name}"
-            register_harness_profile(
-                model_key,
-                HarnessProfile(
-                    general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
-                    excluded_tools=frozenset({"ls", "read_file", "write_file", "edit_file", "delete", "glob", "grep"}),
-                ),
-            )
-            agent = create_deep_agent(
-                model=model_key,
-                system_prompt=SYSTEM_PROMPT,
-                response_format=ReviewDecision,
-            )
+        agent = _make_agent(model or settings.semantic_model, api_key, settings.llm_base_url)
 
     def review(path: Path, results: list[EngineResult]) -> ReviewDecision | None:
         try:
@@ -135,6 +115,13 @@ def build_reviewer(model: str | None = None, agent=None):
             logger.warning("LLM review failed: %s", exc)
             return None
         decision = state.get("structured_response")
-        return decision if isinstance(decision, ReviewDecision) else None
+        if isinstance(decision, ReviewDecision):
+            return decision
+        messages = state.get("messages", [])
+        if messages:
+            last = messages[-1]
+            content = str(last.content) if hasattr(last, "content") else str(last)
+            return _parse_json_response(content)
+        return None
 
     return review
