@@ -7,6 +7,7 @@ from deepagents import (
     create_deep_agent,
     register_harness_profile,
 )
+from langchain.chat_models import init_chat_model
 from pydantic import BaseModel, Field
 
 from skillguard_core.config import get_settings
@@ -53,13 +54,14 @@ def build_reviewer(model: str | None = None, agent=None):
 
         model_name = model or settings.semantic_model
         if settings.llm_base_url:
-            from langchain_openai import ChatOpenAI
-
-            chat_model = ChatOpenAI(
+            
+            chat_model = init_chat_model(
                 model=model_name,
-                api_key=api_key,
                 base_url=settings.llm_base_url,
+                api_key=api_key,
+                temperature=0
             )
+            
             agent = create_deep_agent(
                 model=chat_model,
                 system_prompt=SYSTEM_PROMPT,

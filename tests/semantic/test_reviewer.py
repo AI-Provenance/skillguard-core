@@ -7,10 +7,11 @@ FIXTURE = Path(__file__).parent.parent / "fixtures" / "malicious-skill"
 
 
 def test_returns_none_without_api_key(monkeypatch):
+    monkeypatch.setenv("SKILLGUARD_ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("SKILLGUARD_LLM_API_KEY", "")
+    monkeypatch.setenv("SKILLGUARD_LLM_BASE_URL", "")
     from skillguard_core import config
 
-    monkeypatch.delenv("SKILLGUARD_ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("SKILLGUARD_LLM_API_KEY", raising=False)
     config.get_settings.cache_clear()
     assert build_reviewer() is None
     config.get_settings.cache_clear()

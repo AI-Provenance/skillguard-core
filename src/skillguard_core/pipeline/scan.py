@@ -86,9 +86,9 @@ class ScanService:
         llm_skipped_reason = None
         if use_llm and self.reviewer is None:
             llm_skipped_reason = "no reviewer (missing SKILLGUARD_ANTHROPIC_API_KEY)"
-        elif use_llm and fused.verdict != "caution":
-            llm_skipped_reason = f"verdict is '{fused.verdict}', not 'caution' — review only escalates ambiguous scans"
-        elif use_llm and fused.verdict == "caution" and self.reviewer is not None:
+        elif use_llm and fused.verdict not in ("caution", "dangerous"):
+            llm_skipped_reason = f"verdict is '{fused.verdict}' — review only escalates caution and dangerous scans"
+        elif use_llm and fused.verdict in ("caution", "dangerous") and self.reviewer is not None:
             decision = self.reviewer(fetched.path, results)
             if decision is not None:
                 llm_verdict = decision.verdict

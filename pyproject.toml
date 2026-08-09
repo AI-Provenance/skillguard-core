@@ -20,6 +20,7 @@ ai = [
     "langsmith>=0.3.0",
     "langchain-anthropic",
     "langchain-openai",
+    "langchain-deepseek",
 ]
 dev = [
     "pytest>=8.3",
