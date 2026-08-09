@@ -1,0 +1,14 @@
+.github/workflows/ci.yml
+  h_0dcc239529895a 1,5,7,24-26,43,46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9115f32a4cb5d06c730b9b644e484fbdf8d616b2",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
