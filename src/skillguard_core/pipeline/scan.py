@@ -7,7 +7,7 @@ from pathlib import Path
 
 from skillguard_core.config import get_settings
 from skillguard_core.engines.fusion import fuse
-from skillguard_core.ingest.fetcher import Fetched, content_hash, fetch
+from skillguard_core.ingest.fetcher import Fetched, content_hash, discover_skills, fetch
 
 
 @dataclass(slots=True)
@@ -71,6 +71,10 @@ class ScanService:
             if fetched.origin != "local":
                 root = fetched.path.parent if fetched.path.parent != tmp_root else fetched.path
                 shutil.rmtree(root, ignore_errors=True)
+
+    def scan_directory(self, target: str, *, use_llm: bool = False) -> list[ScanReport]:
+        skill_dirs = discover_skills(Path(target))
+        return [self.scan_target(str(d.path), use_llm=use_llm) for d in skill_dirs]
 
     def scan_fetched(self, fetched: Fetched, *, use_llm: bool = False) -> ScanReport:
         settings = get_settings()

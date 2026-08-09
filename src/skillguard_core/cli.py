@@ -1,5 +1,6 @@
 import json
 from dataclasses import asdict
+from pathlib import Path
 
 import typer
 
@@ -31,6 +32,29 @@ def _engines() -> list:
     ]
 
 
+def _is_skills_dir(target: str) -> bool:
+    try:
+        path = Path(target).expanduser().resolve()
+        return path.is_dir() and not (path / "SKILL.md").exists() and any(
+            d.is_dir() and (d / "SKILL.md").exists() for d in path.iterdir()
+        )
+    except OSError:
+        return False
+
+
+def _format_report(report, json_output: bool, sarif: bool):
+    if sarif:
+        return json.dumps(to_sarif(report), indent=2)
+    if json_output:
+        return json.dumps(asdict(report), indent=2)
+    lines = [f"{report.skill_name}: {report.verdict.upper()} (score {report.fused_score})"]
+    if report.llm_skipped_reason:
+        lines.append(f"  [info] --use-llm skipped: {report.llm_skipped_reason}")
+    for f in report.findings:
+        lines.append(f"  [{f.severity}] {f.engine}/{f.rule_id}: {f.title} ({f.file_path})")
+    return "\n".join(lines)
+
+
 @app.command()
 def scan(
     target: str = typer.Argument(...),
@@ -43,19 +67,26 @@ def scan(
         typer.echo("error: --json and --sarif are mutually exclusive", err=True)
         raise typer.Exit(3)
     service = ScanService(engines=_engines(), reviewer=build_reviewer())
+
+    if _is_skills_dir(target):
+        try:
+            reports = service.scan_directory(target, use_llm=use_llm)
+        except Exception as exc:  # noqa: BLE001
+            typer.echo(f"error: {exc}", err=True)
+            raise typer.Exit(3)
+        if json_output or sarif:
+            typer.echo(json.dumps([asdict(r) if json_output else to_sarif(r) for r in reports], indent=2))
+        else:
+            for report in reports:
+                typer.echo(_format_report(report, False, False))
+                typer.echo()
+        worst = max(reports, key=lambda r: EXIT_CODES.get(r.verdict, 0))
+        raise typer.Exit(EXIT_CODES.get(worst.verdict, 3))
+
     try:
         report = service.scan_target(target, use_llm=use_llm)
     except Exception as exc:  # noqa: BLE001
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(3)
-    if sarif:
-        typer.echo(json.dumps(to_sarif(report), indent=2))
-    elif json_output:
-        typer.echo(json.dumps(asdict(report), indent=2))
-    else:
-        typer.echo(f"{report.skill_name}: {report.verdict.upper()} (score {report.fused_score})")
-        if report.llm_skipped_reason:
-            typer.echo(f"  [info] --use-llm skipped: {report.llm_skipped_reason}", err=True)
-        for f in report.findings:
-            typer.echo(f"  [{f.severity}] {f.engine}/{f.rule_id}: {f.title} ({f.file_path})")
+    typer.echo(_format_report(report, json_output, sarif))
     raise typer.Exit(EXIT_CODES.get(report.verdict, 3))
