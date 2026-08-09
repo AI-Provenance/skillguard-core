@@ -87,8 +87,17 @@ def _parse_json_response(content: str) -> ReviewDecision | None:
 
 def _make_agent(model_name: str, api_key: str, base_url: str = ""):
     if base_url:
+        chat_model = init_chat_model(model=model_name, base_url=base_url, api_key=api_key, temperature=0)
+        from deepagents._models import get_model_identifier, get_model_provider
+
+        provider = get_model_provider(chat_model)
+        identifier = get_model_identifier(chat_model)
+        if provider:
+            register_harness_profile(provider, _SLIM_PROFILE)
+        if provider and identifier and ":" not in identifier:
+            register_harness_profile(f"{provider}:{identifier}", _SLIM_PROFILE)
         return create_deep_agent(
-            model=init_chat_model(model=model_name, base_url=base_url, api_key=api_key, temperature=0),
+            model=chat_model,
             system_prompt=SYSTEM_PROMPT + JSON_FORMAT_INSTRUCTION,
         )
     model_key = f"anthropic:{model_name}"
