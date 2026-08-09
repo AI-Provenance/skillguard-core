@@ -1,0 +1,42 @@
+name: Scan fixtures
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install scanner engines
+        run: |
+          pipx install git+https://github.com/NVIDIA/skillspector.git
+          pipx install git+https://github.com/cisco-ai-defense/skill-scanner.git
+
+      - name: Install skillguard-core
+        run: pipx install .
+
+      - name: Scan fixture skills
+        run: skillguard scan tests/fixtures --sarif
+
+      - name: Upload SARIF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillguard-sarif
+          path: skillguard.sarif
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install project
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Unit tests
+        run: pytest -v -m "not integration"
