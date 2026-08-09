@@ -1,0 +1,14 @@
+src/skillguard_core/cli.py
+  h_0dcc239529895a 75,124-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "bc644595a2044281faefe3cd1da0c6518d71c3a1",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
