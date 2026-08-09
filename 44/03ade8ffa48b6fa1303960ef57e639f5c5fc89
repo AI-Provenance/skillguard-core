@@ -1,0 +1,22 @@
+.env.example
+  h_0dcc239529895a 4,6-8
+pyproject.toml
+  h_0dcc239529895a 22
+src/skillguard_core/config.py
+  h_0dcc239529895a 17-18
+src/skillguard_core/semantic/reviewer.py
+  h_0dcc239529895a 50-51,54-81
+tests/semantic/test_reviewer.py
+  h_0dcc239529895a 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "4403ade8ffa48b6fa1303960ef57e639f5c5fc89",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
