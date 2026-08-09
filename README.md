@@ -16,20 +16,22 @@ fetch → engines → fuse → (optional: semantic review) → report
 ```
 
 1. **Ingest** (`ingest/fetcher.py`) — Fetches a skill from a local directory, Git URL, or zip URL.
-   A directory of skills (subdirs with SKILL.md) is scanned in batch with a progress bar.
+   Size-capped with zip bomb protection (path traversal checks, member count limits).
 
-2. **Engines** (`engines/`) — Runs two open-source scanners as subprocesses:
-   - **NVIDIA SkillSpector** — Heuristic+LLM-aware static analysis
-   - **Cisco skill-scanner** — Policy-based static analysis
+2. **Engines** (`engines/`) — Runs two open-source scanners as subprocesses behind a uniform `EngineResult` interface:
+   - **NVIDIA SkillSpector** — Heuristic+LLM-aware static analysis (`engines/skillspector.py`)
+   - **Cisco skill-scanner** — Policy-based static analysis (`engines/cisco.py`)
+   - Each engine returns parsed findings with severity, fingerprint, and truncated evidence.
    - Runners are injectable — unit tests work without real binaries.
 
-3. **Fusion** (`engines/fusion.py`) — Conservative scoring: takes the max of the engine's risk
-   score and individual finding severities. Verdicts: `safe` (<30), `caution` (30–69),
-   `dangerous` (≥70). Partial engine failures are surfaced but don't block the verdict.
+3. **Fusion** (`engines/fusion.py`) — Takes the highest score across engines, maps severity
+   thresholds to a verdict: `safe` (<30), `caution` (30–69), `dangerous` (≥70).
+   Partial engine failures are surfaced but don't block the verdict.
 
-4. **Semantic review** (`semantic/reviewer.py`) — Optional Deep Agents pass triggered on
-   `caution` and `dangerous` verdicts (not safe). Supports Anthropic natively or any
-   OpenAI-compatible provider via `LLM_API_KEY` + `LLM_BASE_URL`.
+4. **Semantic review** (`semantic/reviewer.py`) — Optional BYOK Deep Agents pass.
+   Activates only when `--use-llm` is set and the fused verdict is `caution`.
+   Slim harness: no subagents, no filesystem tools, structured `ReviewDecision` output.
+   Returns `None` gracefully when no API key is configured.
 
 5. **Report** — The `ScanReport` dataclass (`pipeline/scan.py`) is storage-agnostic:
    no database, no persistence — the private repo plugs in a store.
@@ -37,83 +39,30 @@ fetch → engines → fuse → (optional: semantic review) → report
 ## Install
 
 ```bash
-# Scanner engines (required)
+pipx install skillguard-core
 uv tool install git+https://github.com/NVIDIA/skillspector.git
 uv tool install git+https://github.com/cisco-ai-defense/skill-scanner.git
-
-# CLI
-pipx install skillguard-core                          # from PyPI (once published)
-pipx install "git+https://github.com/AI-Provenance/skillguard-core.git@v0.1.0"  # from git
-```
-
-For LLM review, install with the `ai` extra:
-```bash
-pipx install "skillguard-core[ai]"
 ```
 
 ## Usage
 
 ```bash
-# Single skill
 skillguard scan ./my-skill                 # human output
 skillguard scan ./my-skill --json          # machine output
 skillguard scan ./my-skill --sarif         # SARIF 2.1.0
-
-# Directory of skills (batch)
-skillguard scan ./skills                   # progress bar + summary
-skillguard scan ./skills -v                # verbose: stream results as they complete
-
-# LLM review (second opinion on caution/dangerous verdicts)
-skillguard scan ./my-skill --use-llm       # needs ANTHROPIC_API_KEY or LLM_API_KEY+LLM_BASE_URL
+skillguard scan ./my-skill --use-llm       # semantic review (needs SKILLGUARD_ANTHROPIC_API_KEY)
 ```
 
 Exit codes: `0` safe · `1` caution · `2` dangerous · `3` inconclusive/error.
 
-## LLM Provider Setup
-
-**Anthropic (native structured output):**
-```bash
-export SKILLGUARD_ANTHROPIC_API_KEY=sk-ant-...
-export SKILLGUARD_SEMANTIC_MODEL=claude-sonnet-4-5  # default
-```
-
-**Any OpenAI-compatible provider (Ollama, vLLM, Groq, DeepSeek, etc.):**
-```bash
-export SKILLGUARD_LLM_API_KEY=sk-...
-export SKILLGUARD_LLM_BASE_URL=https://api.groq.com/openai/v1
-export SKILLGUARD_SEMANTIC_MODEL=llama-3.3-70b
-```
-
 ## GitHub Action
 
 ```yaml
-name: Scan skills
-on: [push, pull_request]
-
-jobs:
-  scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install scanner engines
-        run: |
-          pipx install git+https://github.com/NVIDIA/skillspector.git
-          pipx install git+https://github.com/cisco-ai-defense/skill-scanner.git
-
-      - uses: AI-Provenance/skillguard-core@v0.1.0
-        with:
-          path: skills/
-          fail-on: dangerous    # or "caution" to fail on any warning
-
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: skillguard.sarif
+- uses: AI-Provenance/skillguard-core@v0.1.0
+  with:
+    path: skills/my-skill
+    fail-on: dangerous
 ```
-
-The action outputs `skillguard.sarif` at the workspace root, compatible with
-GitHub Code Scanning.
 
 ## Development
 
