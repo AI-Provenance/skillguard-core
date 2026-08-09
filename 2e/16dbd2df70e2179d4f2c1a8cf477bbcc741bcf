@@ -1,0 +1,14 @@
+src/skillguard_core/semantic/reviewer.py
+  h_0dcc239529895a 12-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "2e16dbd2df70e2179d4f2c1a8cf477bbcc741bcf",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
