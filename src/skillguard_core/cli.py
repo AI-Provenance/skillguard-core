@@ -13,7 +13,6 @@ from skillguard_core.engines.skillspector import SkillspectorEngine
 from skillguard_core.ingest.fetcher import discover_skills
 from skillguard_core.pipeline.scan import ScanReport, ScanService
 from skillguard_core.sarif import to_sarif
-from skillguard_core.semantic.reviewer import build_reviewer
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -73,7 +72,7 @@ def scan(
     if json_output and sarif:
         typer.echo("error: --json and --sarif are mutually exclusive", err=True)
         raise typer.Exit(3)
-    service = ScanService(engines=_engines(), reviewer=build_reviewer())
+    service = ScanService(engines=_engines(), reviewer=_get_reviewer())
 
     if _is_skills_dir(target):
         if json_output or sarif:
@@ -120,6 +119,15 @@ def scan(
 def _verdict_tag(verdict: str) -> str:
     tags = {"dangerous": "⚠ ", "caution": "⚡", "safe": "✓ ", "inconclusive": "? "}
     return tags.get(verdict, "  ")
+
+
+def _get_reviewer():
+    try:
+        from skillguard_core.semantic.reviewer import build_reviewer
+
+        return build_reviewer()
+    except ImportError:
+        return None
 
 
 def _print_summary(reports: list[ScanReport]):
