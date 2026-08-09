@@ -47,22 +47,38 @@ def summarize(path: Path, results: list[EngineResult]) -> str:
 def build_reviewer(model: str | None = None, agent=None):
     settings = get_settings()
     if agent is None:
-        if not settings.anthropic_api_key:
+        api_key = settings.anthropic_api_key or settings.llm_api_key
+        if not api_key:
             return None
 
-        model_key = f"anthropic:{model or settings.semantic_model}"
-        register_harness_profile(
-            model_key,
-            HarnessProfile(
-                general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
-                excluded_tools=frozenset({"ls", "read_file", "write_file", "edit_file", "delete", "glob", "grep"}),
-            ),
-        )
-        agent = create_deep_agent(
-            model=model_key,
-            system_prompt=SYSTEM_PROMPT,
-            response_format=ReviewDecision,
-        )
+        model_name = model or settings.semantic_model
+        if settings.llm_base_url:
+            from langchain_openai import ChatOpenAI
+
+            chat_model = ChatOpenAI(
+                model=model_name,
+                api_key=api_key,
+                base_url=settings.llm_base_url,
+            )
+            agent = create_deep_agent(
+                model=chat_model,
+                system_prompt=SYSTEM_PROMPT,
+                response_format=ReviewDecision,
+            )
+        else:
+            model_key = f"anthropic:{model_name}"
+            register_harness_profile(
+                model_key,
+                HarnessProfile(
+                    general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
+                    excluded_tools=frozenset({"ls", "read_file", "write_file", "edit_file", "delete", "glob", "grep"}),
+                ),
+            )
+            agent = create_deep_agent(
+                model=model_key,
+                system_prompt=SYSTEM_PROMPT,
+                response_format=ReviewDecision,
+            )
 
     def review(path: Path, results: list[EngineResult]) -> ReviewDecision | None:
         try:

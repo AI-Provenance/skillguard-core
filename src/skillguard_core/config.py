@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     cisco_policy: str = "balanced"
     semantic_model: str = "claude-sonnet-4-5"
     anthropic_api_key: str = ""
+    llm_api_key: str = ""
+    llm_base_url: str = ""
     danger_min: int = 70
     caution_min: int = 30
 
