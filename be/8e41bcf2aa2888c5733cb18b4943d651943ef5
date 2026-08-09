@@ -1,0 +1,24 @@
+src/skillguard_core/cli.py
+  h_0dcc239529895a 57-58
+src/skillguard_core/engines/fusion.py
+  h_0dcc239529895a 17,19,21-22
+src/skillguard_core/pipeline/scan.py
+  h_0dcc239529895a 38,82-87,92-93,121
+src/skillguard_core/semantic/reviewer.py
+  h_0dcc239529895a 3,5-9
+tests/pipeline/test_scan_service.py
+  h_0dcc239529895a 49,56,60,70
+uv.lock
+  h_0dcc239529895a 1-1599
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "be8e41bcf2aa2888c5733cb18b4943d651943ef5",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
