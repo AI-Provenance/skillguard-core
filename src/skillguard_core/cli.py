@@ -1,4 +1,6 @@
 import json
+import sys
+from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
 
@@ -7,7 +9,7 @@ import typer
 from skillguard_core.config import get_settings
 from skillguard_core.engines.cisco import CiscoScannerEngine
 from skillguard_core.engines.skillspector import SkillspectorEngine
-from skillguard_core.pipeline.scan import ScanService
+from skillguard_core.pipeline.scan import ScanReport, ScanService
 from skillguard_core.sarif import to_sarif
 from skillguard_core.semantic.reviewer import build_reviewer
 
@@ -63,6 +65,7 @@ def scan(
     use_llm: bool = False,
     json_output: bool = typer.Option(False, "--json"),
     sarif: bool = typer.Option(False, "--sarif"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Stream results as each skill is scanned"),
 ) -> None:
     """Scan a skill directory, git URL, or zip URL."""
     if json_output and sarif:
@@ -71,19 +74,18 @@ def scan(
     service = ScanService(engines=_engines(), reviewer=build_reviewer())
 
     if _is_skills_dir(target):
+        show_progress = not json_output and not sarif
+        on_report = _make_progress_callback(verbose) if show_progress else None
         try:
-            reports = service.scan_directory(target, use_llm=use_llm)
+            reports = service.scan_directory(target, use_llm=use_llm, on_report=on_report)
         except Exception as exc:  # noqa: BLE001
             typer.echo(f"error: {exc}", err=True)
             raise typer.Exit(3)
         if json_output or sarif:
             typer.echo(json.dumps([asdict(r) if json_output else to_sarif(r) for r in reports], indent=2))
         else:
-            for report in reports:
-                typer.echo(_format_report(report, False, False))
-                typer.echo()
-        worst = max(reports, key=lambda r: EXIT_CODES.get(r.verdict, 0))
-        raise typer.Exit(EXIT_CODES.get(worst.verdict, 3))
+            _print_summary(reports)
+        raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
     try:
         report = service.scan_target(target, use_llm=use_llm)
@@ -92,3 +94,50 @@ def scan(
         raise typer.Exit(3)
     typer.echo(_format_report(report, json_output, sarif))
     raise typer.Exit(EXIT_CODES.get(report.verdict, 3))
+
+
+def _make_progress_callback(verbose: bool):
+    bar_width = 30
+
+    def on_report(report: ScanReport, idx: int, total: int):
+        filled = int(bar_width * idx / total)
+        bar = "[" + "#" * filled + " " * (bar_width - filled) + "]"
+        tag = _verdict_tag(report.verdict)
+        sys.stderr.write(f"\r{bar} {idx}/{total}  {tag} {report.skill_name}")
+        sys.stderr.flush()
+        if verbose:
+            sys.stderr.write("\n")
+            _print_single(report)
+        if idx == total:
+            sys.stderr.write("\n\n")
+            sys.stderr.flush()
+
+    return on_report
+
+
+def _verdict_tag(verdict: str) -> str:
+    tags = {"dangerous": "⚠ ", "caution": "⚡", "safe": "✓ ", "inconclusive": "? "}
+    return tags.get(verdict, "  ")
+
+
+def _print_single(report: ScanReport):
+    typer.echo(f"  {report.skill_name}: {report.verdict.upper()} (score {report.fused_score})")
+    if report.llm_reviewed:
+        typer.echo(f"    [llm] ({report.llm_confidence:.0%}) {report.llm_rationale}")
+
+
+def _print_summary(reports: list[ScanReport]):
+    verdict_colors = {"dangerous": typer.colors.RED, "caution": typer.colors.YELLOW, "safe": typer.colors.GREEN}
+    verdicts = Counter(r.verdict for r in reports)
+    total = len(reports)
+    typer.echo()
+    for verdict in ("dangerous", "caution", "safe"):
+        count = verdicts.get(verdict, 0)
+        if count:
+            color = verdict_colors.get(verdict)
+            typer.secho(f"  {verdict.upper():<12} {count:>3}/{total}", fg=color)
+    typer.echo(f"  {'total':<12} {total:>3}")
+    typer.echo()
+    for r in sorted(reports, key=lambda r: (EXIT_CODES.get(r.verdict, 99), r.skill_name)):
+        tag = _verdict_tag(r.verdict)
+        typer.secho(f"  {tag} {r.skill_name} (score {r.fused_score})", fg=verdict_colors.get(r.verdict))
