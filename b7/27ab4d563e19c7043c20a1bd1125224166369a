@@ -1,0 +1,14 @@
+tests/pipeline/test_scan_service.py
+  h_0dcc239529895a 1,75-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "b727ab4d563e19c7043c20a1bd1125224166369a",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
