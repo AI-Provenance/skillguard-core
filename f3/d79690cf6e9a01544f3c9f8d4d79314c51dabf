@@ -1,0 +1,16 @@
+src/skillguard_core/cli.py
+  h_0dcc239529895a 2,5,72,83,94-101,108,121-131
+src/skillguard_core/pipeline/scan.py
+  h_0dcc239529895a 5,78,80-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f3d79690cf6e9a01544f3c9f8d4d79314c51dabf",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
