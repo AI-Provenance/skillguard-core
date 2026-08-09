@@ -7,6 +7,35 @@ SARIF, or CI exit codes. Apache-2.0.
 Part of SkillGuard — continuous trust for AI agent skills. Hosted drift
 monitoring and CI policy live at skillguard.dev.
 
+## How it works
+
+The scanner follows a deterministic pipeline — no agent framework on the hot path:
+
+```
+fetch → engines → fuse → (optional: semantic review) → report
+```
+
+1. **Ingest** (`ingest/fetcher.py`) — Fetches a skill from a local directory, Git URL, or zip URL.
+   Size-capped with zip bomb protection (path traversal checks, member count limits).
+
+2. **Engines** (`engines/`) — Runs two open-source scanners as subprocesses behind a uniform `EngineResult` interface:
+   - **NVIDIA SkillSpector** — Heuristic+LLM-aware static analysis (`engines/skillspector.py`)
+   - **Cisco skill-scanner** — Policy-based static analysis (`engines/cisco.py`)
+   - Each engine returns parsed findings with severity, fingerprint, and truncated evidence.
+   - Runners are injectable — unit tests work without real binaries.
+
+3. **Fusion** (`engines/fusion.py`) — Takes the highest score across engines, maps severity
+   thresholds to a verdict: `safe` (<30), `caution` (30–69), `dangerous` (≥70).
+   Partial engine failures are surfaced but don't block the verdict.
+
+4. **Semantic review** (`semantic/reviewer.py`) — Optional BYOK Deep Agents pass.
+   Activates only when `--use-llm` is set and the fused verdict is `caution`.
+   Slim harness: no subagents, no filesystem tools, structured `ReviewDecision` output.
+   Returns `None` gracefully when no API key is configured.
+
+5. **Report** — The `ScanReport` dataclass (`pipeline/scan.py`) is storage-agnostic:
+   no database, no persistence — the private repo plugs in a store.
+
 ## Install
 
 ```bash
