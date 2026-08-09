@@ -1,0 +1,20 @@
+pyproject.toml
+  h_0dcc239529895a 12
+src/skillguard_core/cli.py
+  h_0dcc239529895a 7,13,80-84,86-108
+src/skillguard_core/pipeline/scan.py
+  h_0dcc239529895a 77,79
+uv.lock
+  h_0dcc239529895a 1355,1394
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f4bc13a4f3147858e2986e1d72ffa22a6445ad94",
+  "prompts": {},
+  "humans": {
+    "h_0dcc239529895a": {
+      "author": "Shahriyar Rzayev <rzayev.sehriyar@gmail.com>"
+    }
+  }
+}
