@@ -14,11 +14,12 @@ class FusedVerdict:
 
 
 def engine_score(result: EngineResult) -> int:
+    score = 0
     if result.score is not None:
-        return max(0, min(100, result.score))
+        score = max(0, min(100, result.score))
     if result.findings:
-        return max(SEVERITY_SCORES.get(f.severity, 0) for f in result.findings)
-    return 0
+        score = max(score, *(SEVERITY_SCORES.get(f.severity, 0) for f in result.findings))
+    return score
 
 
 def score_to_severity(score: int) -> str:

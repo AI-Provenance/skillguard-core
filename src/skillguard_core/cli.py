@@ -54,6 +54,8 @@ def scan(
         typer.echo(json.dumps(asdict(report), indent=2))
     else:
         typer.echo(f"{report.skill_name}: {report.verdict.upper()} (score {report.fused_score})")
+        if report.llm_skipped_reason:
+            typer.echo(f"  [info] --use-llm skipped: {report.llm_skipped_reason}", err=True)
         for f in report.findings:
             typer.echo(f"  [{f.severity}] {f.engine}/{f.rule_id}: {f.title} ({f.file_path})")
     raise typer.Exit(EXIT_CODES.get(report.verdict, 3))

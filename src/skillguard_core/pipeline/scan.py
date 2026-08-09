@@ -35,6 +35,7 @@ class ScanReport:
     verdict: str
     llm_reviewed: bool = False
     llm_verdict: str | None = None
+    llm_skipped_reason: str | None = None
     findings: list[ReportFinding] = field(default_factory=list)
     engine_errors: dict[str, str] = field(default_factory=dict)
     duration_ms: int = 0
@@ -78,11 +79,18 @@ class ScanService:
         fused = fuse(results, danger_min=settings.danger_min, caution_min=settings.caution_min)
 
         llm_verdict = None
-        if use_llm and fused.verdict == "caution" and self.reviewer is not None:
+        llm_skipped_reason = None
+        if use_llm and self.reviewer is None:
+            llm_skipped_reason = "no reviewer (missing SKILLGUARD_ANTHROPIC_API_KEY)"
+        elif use_llm and fused.verdict != "caution":
+            llm_skipped_reason = f"verdict is '{fused.verdict}', not 'caution' — review only escalates ambiguous scans"
+        elif use_llm and fused.verdict == "caution" and self.reviewer is not None:
             decision = self.reviewer(fetched.path, results)
             if decision is not None:
                 llm_verdict = decision.verdict
                 fused = replace(fused, verdict=decision.verdict)
+            else:
+                llm_skipped_reason = "reviewer returned no decision"
 
         findings = [
             ReportFinding(
@@ -110,6 +118,7 @@ class ScanService:
             verdict=fused.verdict,
             llm_reviewed=llm_verdict is not None,
             llm_verdict=llm_verdict,
+            llm_skipped_reason=llm_skipped_reason,
             findings=findings,
             engine_errors=fused.engine_errors,
             duration_ms=int((time.monotonic() - started) * 1000),

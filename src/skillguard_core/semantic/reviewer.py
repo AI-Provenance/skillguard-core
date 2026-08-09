@@ -1,11 +1,12 @@
 from pathlib import Path
 from typing import Literal
+
 from deepagents import (
-            GeneralPurposeSubagentProfile,
-            HarnessProfile,
-            create_deep_agent,
-            register_harness_profile,
-        )
+    GeneralPurposeSubagentProfile,
+    HarnessProfile,
+    create_deep_agent,
+    register_harness_profile,
+)
 from pydantic import BaseModel, Field
 
 from skillguard_core.config import get_settings
