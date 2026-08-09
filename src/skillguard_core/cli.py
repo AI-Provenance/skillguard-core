@@ -98,17 +98,19 @@ def scan(
 
 def _make_progress_callback(verbose: bool):
     bar_width = 30
+    overwrite = sys.stderr.isatty()
+    line_end = "\r" if overwrite else "\n"
 
     def on_report(report: ScanReport, idx: int, total: int):
         filled = int(bar_width * idx / total)
         bar = "[" + "#" * filled + " " * (bar_width - filled) + "]"
         tag = _verdict_tag(report.verdict)
-        sys.stderr.write(f"\r{bar} {idx}/{total}  {tag} {report.skill_name}")
+        sys.stderr.write(f"{line_end}{bar} {idx}/{total}  {tag} {report.skill_name}")
         sys.stderr.flush()
         if verbose:
             sys.stderr.write("\n")
             _print_single(report)
-        if idx == total:
+        if idx == total and not verbose:
             sys.stderr.write("\n\n")
             sys.stderr.flush()
 
@@ -124,6 +126,9 @@ def _print_single(report: ScanReport):
     typer.echo(f"  {report.skill_name}: {report.verdict.upper()} (score {report.fused_score})")
     if report.llm_reviewed:
         typer.echo(f"    [llm] ({report.llm_confidence:.0%}) {report.llm_rationale}")
+    for f in report.findings:
+        level = f.severity[:4].upper()
+        typer.echo(f"    [{level}] {f.engine}/{f.rule_id}: {f.title}")
 
 
 def _print_summary(reports: list[ScanReport]):
