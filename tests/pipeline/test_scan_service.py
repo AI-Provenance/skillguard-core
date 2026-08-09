@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -71,3 +72,36 @@ def test_reviewer_not_called_without_use_llm(tmp_path):
     assert report.llm_skipped_reason is None
     assert report.verdict == "caution"
     assert called == []
+
+
+class DelayedStubEngine:
+    name = "stub"
+
+    def __init__(self, delay: float = 0.1):
+        self.delay = delay
+
+    def scan(self, path: Path) -> EngineResult:
+        time.sleep(self.delay)
+        return EngineResult(engine="stub", score=5)
+
+
+def test_scan_directory_parallel_is_faster_than_sequential(tmp_path):
+    delay = 0.1
+    for i in range(4):
+        skill_dir = tmp_path / f"skill-{i}"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(f"---\nname: skill-{i}\n---\n# Skill {i}")
+    engine = DelayedStubEngine(delay=delay)
+    service = ScanService(engines=[engine])
+    # sequential
+    started = time.monotonic()
+    reports_seq = service.scan_directory(str(tmp_path), max_workers=1)
+    elapsed_seq = time.monotonic() - started
+    assert len(reports_seq) == 4
+    # parallel
+    started = time.monotonic()
+    reports_par = service.scan_directory(str(tmp_path), max_workers=4)
+    elapsed_par = time.monotonic() - started
+    assert len(reports_par) == 4
+    assert {r.skill_name for r in reports_par} == {r.skill_name for r in reports_seq}
+    assert elapsed_par < elapsed_seq * 0.6  # at least 40% faster with 4 workers
