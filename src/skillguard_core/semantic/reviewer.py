@@ -9,6 +9,8 @@ from deepagents import (
     create_deep_agent,
     register_harness_profile,
 )
+from deepagents._models import get_model_identifier, get_model_provider
+
 from langchain.chat_models import init_chat_model
 from pydantic import BaseModel, Field
 
@@ -88,7 +90,6 @@ def _parse_json_response(content: str) -> ReviewDecision | None:
 def _make_agent(model_name: str, api_key: str, base_url: str = ""):
     if base_url:
         chat_model = init_chat_model(model=model_name, base_url=base_url, api_key=api_key, temperature=0)
-        from deepagents._models import get_model_identifier, get_model_provider
 
         provider = get_model_provider(chat_model)
         identifier = get_model_identifier(chat_model)
