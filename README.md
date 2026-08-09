@@ -58,7 +58,7 @@ Exit codes: `0` safe · `1` caution · `2` dangerous · `3` inconclusive/error.
 ## GitHub Action
 
 ```yaml
-- uses: skillguardai/skillguard-core@v0
+- uses: AI-Provenance/skillguard-core@v0.1.0
   with:
     path: skills/my-skill
     fail-on: dangerous
