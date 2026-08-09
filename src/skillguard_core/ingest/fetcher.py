@@ -46,6 +46,17 @@ def fetch(
         local = Path(target).expanduser().resolve()
         if not local.is_dir():
             raise FileNotFoundError(f"not a directory: {target}")
+        if not (local / "SKILL.md").exists():
+            subdirs = [d for d in local.iterdir() if d.is_dir() and (d / "SKILL.md").exists()]
+            if len(subdirs) == 1:
+                local = subdirs[0]
+            elif subdirs:
+                raise FileNotFoundError(
+                    f"'{target}' contains {len(subdirs)} skills. "
+                    f"Point at one, e.g. {subdirs[0]}"
+                )
+            else:
+                raise FileNotFoundError(f"no SKILL.md found in '{target}'")
         return Fetched(path=local, origin="local", source_url=str(local), version_ref="")
 
     workdir = Path(tempfile.mkdtemp(dir=tmp_root))

@@ -18,6 +18,7 @@ def make_zip_bytes(files: dict[str, str]) -> bytes:
 
 
 def test_local_directory(tmp_path):
+    (tmp_path / "SKILL.md").write_text("# Test skill")
     fetched = fetch(str(tmp_path), tmp_root=tmp_path / "work", max_bytes=1024)
     assert fetched.origin == "local"
     assert fetched.path == tmp_path.resolve()
