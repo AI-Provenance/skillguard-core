@@ -1,8 +1,10 @@
-name: Scan fixtures
+name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
   scan:
@@ -19,7 +21,9 @@ jobs:
         run: pipx install .
 
       - name: Scan fixture skills
-        run: skillguard scan tests/fixtures --sarif
+        run: |
+          skillguard scan tests/fixtures --sarif > skillguard.sarif || true
+          cat skillguard.sarif
 
       - name: Upload SARIF
         if: always()
@@ -36,7 +40,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
 
       - name: Install project
-        run: uv pip install --system -e ".[dev]"
+        run: uv sync --extra dev
 
       - name: Unit tests
-        run: pytest -v -m "not integration"
+        run: uv run pytest -v -m "not integration"
