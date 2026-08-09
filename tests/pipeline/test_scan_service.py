@@ -47,11 +47,12 @@ def test_engine_errors_are_surfaced(tmp_path):
 
 def test_reviewer_escalates_caution(tmp_path):
     engine = StubEngine(EngineResult(engine="stub", score=45))
-    reviewer = lambda path, results: SimpleNamespace(verdict="dangerous")
+    reviewer = lambda path, results: SimpleNamespace(verdict="dangerous", confidence=0.9, rationale="test")
     service = ScanService(engines=[engine], reviewer=reviewer)
     report = service.scan_target(str(FIXTURE), tmp_root=tmp_path, use_llm=True)
     assert report.llm_reviewed is True
     assert report.llm_verdict == "dangerous"
+    assert report.llm_confidence == 0.9
     assert report.verdict == "dangerous"
     assert report.llm_skipped_reason is None
 
@@ -62,7 +63,7 @@ def test_reviewer_not_called_without_use_llm(tmp_path):
 
     def reviewer(path, results):
         called.append(1)
-        return SimpleNamespace(verdict="dangerous")
+        return SimpleNamespace(verdict="dangerous", confidence=0.9, rationale="test")
 
     service = ScanService(engines=[engine], reviewer=reviewer)
     report = service.scan_target(str(FIXTURE), tmp_root=tmp_path)

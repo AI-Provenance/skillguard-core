@@ -35,6 +35,8 @@ class ScanReport:
     verdict: str
     llm_reviewed: bool = False
     llm_verdict: str | None = None
+    llm_confidence: float | None = None
+    llm_rationale: str | None = None
     llm_skipped_reason: str | None = None
     findings: list[ReportFinding] = field(default_factory=list)
     engine_errors: dict[str, str] = field(default_factory=dict)
@@ -83,6 +85,8 @@ class ScanService:
         fused = fuse(results, danger_min=settings.danger_min, caution_min=settings.caution_min)
 
         llm_verdict = None
+        llm_confidence = None
+        llm_rationale = None
         llm_skipped_reason = None
         if use_llm and self.reviewer is None:
             llm_skipped_reason = "no reviewer (missing SKILLGUARD_ANTHROPIC_API_KEY)"
@@ -92,6 +96,8 @@ class ScanService:
             decision = self.reviewer(fetched.path, results)
             if decision is not None:
                 llm_verdict = decision.verdict
+                llm_confidence = decision.confidence
+                llm_rationale = decision.rationale
                 fused = replace(fused, verdict=decision.verdict)
             else:
                 llm_skipped_reason = "reviewer returned no decision"
@@ -122,6 +128,8 @@ class ScanService:
             verdict=fused.verdict,
             llm_reviewed=llm_verdict is not None,
             llm_verdict=llm_verdict,
+            llm_confidence=llm_confidence,
+            llm_rationale=llm_rationale,
             llm_skipped_reason=llm_skipped_reason,
             findings=findings,
             engine_errors=fused.engine_errors,

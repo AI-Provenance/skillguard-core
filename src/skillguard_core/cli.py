@@ -48,7 +48,9 @@ def _format_report(report, json_output: bool, sarif: bool):
     if json_output:
         return json.dumps(asdict(report), indent=2)
     lines = [f"{report.skill_name}: {report.verdict.upper()} (score {report.fused_score})"]
-    if report.llm_skipped_reason:
+    if report.llm_reviewed:
+        lines.append(f"  [llm] verdict '{report.llm_verdict}', confidence {report.llm_confidence:.0%}: {report.llm_rationale}")
+    elif report.llm_skipped_reason:
         lines.append(f"  [info] --use-llm skipped: {report.llm_skipped_reason}")
     for f in report.findings:
         lines.append(f"  [{f.severity}] {f.engine}/{f.rule_id}: {f.title} ({f.file_path})")
