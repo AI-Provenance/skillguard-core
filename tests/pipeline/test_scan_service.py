@@ -60,6 +60,32 @@ def test_reviewer_escalates_caution(tmp_path):
     assert report.llm_skipped_reason is None
 
 
+def test_reviewer_cannot_downgrade_caution(tmp_path):
+    engine = StubEngine(EngineResult(engine="stub", score=45))
+    reviewer = lambda path, results: SimpleNamespace(verdict="safe", confidence=0.95, rationale="looks fine")
+    service = ScanService(engines=[engine], reviewer=reviewer)
+    report = service.scan_target(str(FIXTURE), tmp_root=tmp_path, use_llm=True)
+    assert report.llm_reviewed is True
+    assert report.llm_verdict == "safe"
+    assert report.llm_confidence == 0.95
+    assert report.verdict == "caution"
+
+
+def test_reviewer_not_called_for_inconclusive(tmp_path):
+    engine = StubEngine(EngineResult(engine="stub", error="no report produced"))
+    called = []
+
+    def reviewer(path, results):
+        called.append(1)
+        return SimpleNamespace(verdict="dangerous", confidence=0.9, rationale="test")
+
+    service = ScanService(engines=[engine], reviewer=reviewer)
+    report = service.scan_target(str(FIXTURE), tmp_root=tmp_path, use_llm=True)
+    assert report.llm_reviewed is False
+    assert report.verdict == "inconclusive"
+    assert called == []
+
+
 def test_reviewer_not_called_without_use_llm(tmp_path):
     engine = StubEngine(EngineResult(engine="stub", score=45))
     called = []
