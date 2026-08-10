@@ -32,8 +32,10 @@ def test_scan_target_returns_report(tmp_path):
     assert report.fused_score == 87
     assert report.skill_name == "free-gpt-booster"
     assert report.origin == "local"
-    assert report.content_hash
+    assert report.source_url == str(FIXTURE.resolve())
+    assert report.content_hash and len(report.content_hash) == 64
     assert report.engines == ["stub"]
+    assert report.version_ref == ""
     assert len(report.findings) == 1
     assert report.findings[0].rule_id == "EX1"
 
