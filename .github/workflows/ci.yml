@@ -12,6 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: astral-sh/setup-uv@v5
+
       - name: Install scanner engines
         run: |
           pipx install git+https://github.com/NVIDIA/skillspector.git
@@ -24,6 +26,9 @@ jobs:
         run: |
           skillguard scan tests/fixtures --sarif > skillguard.sarif || true
           cat skillguard.sarif
+
+      - name: Integration tests
+        run: uv sync --extra dev && uv run pytest -m integration -v
 
       - name: Upload SARIF
         if: always()
