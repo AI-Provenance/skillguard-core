@@ -75,7 +75,7 @@ def scan(
     if json_output and sarif:
         typer.echo("error: --json and --sarif are mutually exclusive", err=True)
         raise typer.Exit(3)
-    service = ScanService(engines=_engines(), reviewer=_get_reviewer())
+    service = ScanService(engines=_engines(), reviewer=_try_get_reviewer(use_llm))
 
     if _is_skills_dir(target):
         if json_output or sarif:
@@ -135,12 +135,22 @@ def _verdict_tag(verdict: str) -> str:
 
 
 def _get_reviewer():
-    try:
-        from skillguard_core.semantic.reviewer import build_reviewer
+    from skillguard_core.semantic.reviewer import build_reviewer
 
-        return build_reviewer()
-    except ImportError:
+    return build_reviewer()
+
+
+def _try_get_reviewer(use_llm: bool):
+    if not use_llm:
         return None
+    try:
+        return _get_reviewer()
+    except ImportError:
+        typer.echo(
+            "error: --use-llm requires the 'ai' extra. Install with: pipx install skillguard-core[ai]",
+            err=True,
+        )
+        raise typer.Exit(3)
 
 
 def _print_summary(reports: list[ScanReport]):
