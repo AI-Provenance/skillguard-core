@@ -55,3 +55,14 @@ def test_scan_human_output_exit_codes(monkeypatch):
     result = runner.invoke(cli.app, ["scan", str(FIXTURE)])
     assert result.exit_code == 0
     assert "SAFE" in result.output
+
+
+def test_use_llm_without_ai_extra_shows_fix_message(monkeypatch):
+    def fake_get_reviewer():
+        raise ImportError("No module named 'deepagents'")
+
+    monkeypatch.setattr(cli, "_get_reviewer", fake_get_reviewer)
+    monkeypatch.setattr(cli, "_engines", lambda: [StubEngine()])
+    result = runner.invoke(cli.app, ["scan", str(FIXTURE), "--use-llm"])
+    assert result.exit_code == 3
+    assert "pipx install skillguard-core[ai]" in result.output
