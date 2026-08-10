@@ -29,6 +29,11 @@ def test_scan_json_output(monkeypatch):
     assert payload["verdict"] == "dangerous"
     assert payload["fused_score"] == 87
     assert payload["skill_name"] == "free-gpt-booster"
+    assert payload["origin"] == "local"
+    assert payload["source_url"] == str(FIXTURE.resolve())
+    assert isinstance(payload["content_hash"], str) and len(payload["content_hash"]) == 64
+    assert payload["engines"] == ["stub"]
+    assert payload["version_ref"] == ""
 
 
 def test_scan_sarif_output(monkeypatch):
