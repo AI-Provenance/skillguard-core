@@ -10,6 +10,8 @@ from skillguard_core.config import get_settings
 from skillguard_core.engines.fusion import fuse
 from skillguard_core.ingest.fetcher import Fetched, content_hash, discover_skills, fetch
 
+VERDICT_RANK = {"safe": 0, "caution": 1, "dangerous": 2}
+
 
 @dataclass(slots=True)
 class ReportFinding:
@@ -107,7 +109,10 @@ class ScanService:
                 llm_verdict = decision.verdict
                 llm_confidence = decision.confidence
                 llm_rationale = decision.rationale
-                fused = replace(fused, verdict=decision.verdict)
+                fused_rank = VERDICT_RANK.get(fused.verdict)
+                reviewer_rank = VERDICT_RANK.get(decision.verdict)
+                if fused_rank is not None and reviewer_rank is not None and reviewer_rank > fused_rank:
+                    fused = replace(fused, verdict=decision.verdict)
             else:
                 llm_skipped_reason = "reviewer returned no decision"
 
