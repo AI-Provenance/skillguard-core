@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- GitHub Action `use-llm` input: enables the LLM reviewer (BYOK) by installing the `ai` extra and passing `--use-llm`. Keys come from the environment via `secrets` (never as inputs): `SKILLGUARD_ANTHROPIC_API_KEY` or `SKILLGUARD_LLM_API_KEY` + `SKILLGUARD_LLM_BASE_URL`.
+
 ## v0.1.1 (2026-08-10)
 
 ### Added
