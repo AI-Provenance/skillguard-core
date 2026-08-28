@@ -5,6 +5,19 @@ description = "Security scanner for AI agent skills — engines, fusion, CLI"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.12"
+authors = [
+    { name = "Shahriyar Rzayev", email = "rzayev.sehriyar@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = [
     "pydantic>=2.8",
     "pydantic-settings>=2.4",
@@ -31,6 +44,11 @@ dev = [
     "respx>=0.21",
     "ruff>=0.6",
 ]
+
+[project.urls]
+Homepage = "https://github.com/AI-Provenance/skillguard-core"
+Repository = "https://github.com/AI-Provenance/skillguard-core"
+Issues = "https://github.com/AI-Provenance/skillguard-core/issues"
 
 [project.scripts]
 skillguard = "skillguard_core.cli:app"
