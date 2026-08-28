@@ -16,11 +16,20 @@ inputs:
     description: "Number of parallel scan workers (default: CPU count)"
     required: false
     default: ""
+  use-llm:
+    description: "Enable LLM review of caution/dangerous verdicts (bring your own key via env)"
+    required: false
+    default: "false"
 runs:
   using: "composite"
   steps:
     - name: Install skillguard
-      run: pipx install "${{ github.action_path }}"
+      run: |
+        if [ "${{ inputs.use-llm }}" = "true" ]; then
+          pipx install "${{ github.action_path }}[ai]"
+        else
+          pipx install "${{ github.action_path }}"
+        fi
       shell: bash
     - name: Scan
       id: scan
@@ -28,7 +37,9 @@ runs:
         set +e
         WORKERS_FLAG=""
         if [ -n "${{ inputs.workers }}" ]; then WORKERS_FLAG="--workers ${{ inputs.workers }}"; fi
-        skillguard scan "${{ inputs.path }}" --sarif $WORKERS_FLAG > "${{ github.workspace }}/skillguard.sarif"
+        USE_LLM_FLAG=""
+        if [ "${{ inputs.use-llm }}" = "true" ]; then USE_LLM_FLAG="--use-llm"; fi
+        skillguard scan "${{ inputs.path }}" --sarif $WORKERS_FLAG $USE_LLM_FLAG > "${{ github.workspace }}/skillguard.sarif"
         code=$?
         set -e
         echo "exit_code=$code" >> "$GITHUB_OUTPUT"

@@ -102,11 +102,19 @@ jobs:
           pipx install git+https://github.com/NVIDIA/skillspector.git
           pipx install git+https://github.com/cisco-ai-defense/skill-scanner.git
 
-      - uses: AI-Provenance/skillguard-core@v0.1.0
+      - uses: AI-Provenance/skillguard-core@v0.1.1
         with:
           path: skills/
           fail-on: dangerous    # or "caution" to fail on any warning
           workers: "8"           # parallel workers (default: CPU count)
+          use-llm: "true"        # optional: LLM review of caution/dangerous verdicts
+        env:
+          # Bring your own key — never pass secrets as `with:` inputs.
+          # Anthropic:
+          SKILLGUARD_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # or any OpenAI-compatible provider:
+          # SKILLGUARD_LLM_API_KEY: ${{ secrets.SKILLGUARD_LLM_API_KEY }}
+          # SKILLGUARD_LLM_BASE_URL: https://api.groq.com/openai/v1
 
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
@@ -115,7 +123,9 @@ jobs:
 ```
 
 The action outputs `skillguard.sarif` at the workspace root, compatible with
-GitHub Code Scanning.
+GitHub Code Scanning. `use-llm: "true"` installs the `ai` extra and enables LLM
+review; without a key in the environment the scan still runs with the
+deterministic engines only.
 
 ## Development
 
