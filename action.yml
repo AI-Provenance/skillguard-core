@@ -62,8 +62,10 @@ runs:
         exit 0
       shell: bash
     - name: Upload SARIF
+      id: upload-sarif
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: skillguard-sarif
         path: skillguard.sarif
+        if-no-files-found: ignore
