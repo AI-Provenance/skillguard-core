@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.4 (2026-08-29)
+
+### Changed
+- **CI failure UX**: directory scans with `--sarif` now print the human summary (per-verdict counts and per-skill lines) to stderr, so CI logs show which skills were dangerous without touching the SARIF on stdout.
+- GitHub Action scan step now emits a `::error::` annotation on a threshold breach naming the worst verdict, exit code, and `fail-on` threshold, and exposes a `verdict` output.
+
 ## v0.1.3 (2026-08-29)
 
 ### Fixed

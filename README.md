@@ -43,7 +43,7 @@ uv tool install git+https://github.com/cisco-ai-defense/skill-scanner.git
 
 # CLI
 pipx install skillguard-core                          # from PyPI (once published)
-pipx install "git+https://github.com/AI-Provenance/skillguard-core.git@v0.1.3"  # from git
+pipx install "git+https://github.com/AI-Provenance/skillguard-core.git@v0.1.4"  # from git
 ```
 
 For LLM review, install with the `ai` extra:
@@ -102,7 +102,7 @@ jobs:
           pipx install git+https://github.com/NVIDIA/skillspector.git
           pipx install git+https://github.com/cisco-ai-defense/skill-scanner.git
 
-      - uses: AI-Provenance/skillguard-core@v0.1.3
+      - uses: AI-Provenance/skillguard-core@v0.1.4
         with:
           path: skills/
           fail-on: dangerous    # or "caution" to fail on any warning

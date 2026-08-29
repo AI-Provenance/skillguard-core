@@ -44,6 +44,21 @@ def test_scan_sarif_output(monkeypatch):
     assert payload["version"] == "2.1.0"
 
 
+def test_directory_scan_sarif_prints_summary_to_stderr(monkeypatch, tmp_path):
+    for name in ("evil-a", "evil-b"):
+        d = tmp_path / "skills" / name
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(f"---\nname: {name}\n---\n")
+
+    monkeypatch.setattr(cli, "_engines", lambda: [StubEngine()])
+    result = runner.invoke(cli.app, ["scan", str(tmp_path / "skills"), "--sarif"])
+    assert result.exit_code == 2
+    payload = json.loads(result.stdout)
+    assert payload["version"] == "2.1.0"
+    assert "DANGEROUS" in result.stderr
+    assert "evil-a" in result.stderr and "evil-b" in result.stderr
+
+
 def test_scan_human_output_exit_codes(monkeypatch):
     class SafeEngine:
         name = "stub"

@@ -42,9 +42,23 @@ runs:
         skillguard scan "${{ inputs.path }}" --sarif $WORKERS_FLAG $USE_LLM_FLAG > "${{ github.workspace }}/skillguard.sarif"
         code=$?
         set -e
+        case "$code" in
+          0) verdict="safe" ;;
+          1) verdict="caution" ;;
+          2) verdict="dangerous" ;;
+          3) verdict="inconclusive" ;;
+          *) verdict="unknown" ;;
+        esac
         echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-        if [ "${{ inputs.fail-on }}" = "caution" ] && [ "$code" -ge 1 ]; then exit 1; fi
-        if [ "${{ inputs.fail-on }}" = "dangerous" ] && [ "$code" -ge 2 ]; then exit 1; fi
+        echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+        if [ "${{ inputs.fail-on }}" = "caution" ] && [ "$code" -ge 1 ]; then
+          echo "::error::skillguard scan failed: worst verdict '$verdict' (exit code $code) meets fail-on threshold 'caution'. See the step log above for per-skill results and the skillguard-sarif artifact for details."
+          exit 1
+        fi
+        if [ "${{ inputs.fail-on }}" = "dangerous" ] && [ "$code" -ge 2 ]; then
+          echo "::error::skillguard scan failed: worst verdict '$verdict' (exit code $code) meets fail-on threshold 'dangerous'. See the step log above for per-skill results and the skillguard-sarif artifact for details."
+          exit 1
+        fi
         exit 0
       shell: bash
     - name: Upload SARIF

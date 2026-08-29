@@ -33,3 +33,10 @@ def test_action_passes_use_llm_flag_to_scan():
     scan_step = next(s for s in manifest["runs"]["steps"] if s.get("id") == "scan")
     assert "inputs.use-llm" in scan_step["run"]
     assert "--use-llm" in scan_step["run"]
+
+
+def test_action_scan_step_reports_verdict_and_error_annotation():
+    manifest = load_manifest()
+    scan_step = next(s for s in manifest["runs"]["steps"] if s.get("id") == "scan")
+    assert "::error::" in scan_step["run"]
+    assert 'echo "verdict=$verdict" >> "$GITHUB_OUTPUT"' in scan_step["run"]
