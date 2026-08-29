@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.5 (2026-08-29)
+
+### Changed
+- README GitHub Action example: document `SKILLGUARD_SEMANTIC_MODEL` as required for LLM review and clarify that the action stores the SARIF as a workflow artifact while the `codeql-action/upload-sarif` step feeds GitHub Code Scanning.
+
 ## v0.1.4 (2026-08-29)
 
 ### Changed
