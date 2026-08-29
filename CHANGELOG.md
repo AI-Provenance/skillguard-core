@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.6 (2026-08-29)
+
+### Added
+- CI scan summary now shows richer per-skill detail: finding counts, engine errors, LLM verdict/confidence/rationale when LLM review ran, and why the LLM was skipped otherwise.
+
 ## v0.1.5 (2026-08-29)
 
 ### Changed

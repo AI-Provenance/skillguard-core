@@ -168,4 +168,17 @@ def _print_summary(reports: list[ScanReport], err: bool = False):
     typer.echo(err=err)
     for r in sorted(reports, key=lambda r: (EXIT_CODES.get(r.verdict, 99), r.skill_name)):
         tag = _verdict_tag(r.verdict)
-        typer.secho(f"  {tag} {r.skill_name} (score {r.fused_score})", fg=verdict_colors.get(r.verdict), err=err)
+        n = len(r.findings)
+        finding_detail = f", {n} finding{'s' if n != 1 else ''}" if n else ""
+        typer.secho(
+            f"  {tag} {r.skill_name} (score {r.fused_score}{finding_detail})",
+            fg=verdict_colors.get(r.verdict),
+            err=err,
+        )
+        for engine, error in r.engine_errors.items():
+            typer.echo(f"     [engine] {engine}: {error}", err=err)
+        if r.llm_reviewed and r.llm_verdict:
+            confidence = r.llm_confidence if r.llm_confidence is not None else 0
+            typer.echo(f"     [llm] {r.llm_verdict} ({confidence:.0%}): {r.llm_rationale}", err=err)
+        elif r.llm_skipped_reason and r.verdict != "safe":
+            typer.echo(f"     [info] llm skipped: {r.llm_skipped_reason}", err=err)
