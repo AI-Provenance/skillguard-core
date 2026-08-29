@@ -43,7 +43,7 @@ uv tool install git+https://github.com/cisco-ai-defense/skill-scanner.git
 
 # CLI
 pipx install skillguard-core                          # from PyPI (once published)
-pipx install "git+https://github.com/AI-Provenance/skillguard-core.git@v0.1.6"  # from git
+pipx install "git+https://github.com/AI-Provenance/skillguard-core.git@v0.1.7"  # from git
 ```
 
 For LLM review, install with the `ai` extra:
@@ -102,7 +102,7 @@ jobs:
           pipx install git+https://github.com/NVIDIA/skillspector.git
           pipx install git+https://github.com/cisco-ai-defense/skill-scanner.git
 
-      - uses: AI-Provenance/skillguard-core@v0.1.6
+      - uses: AI-Provenance/skillguard-core@v0.1.7
         with:
           path: skills/
           fail-on: dangerous    # or "caution" to fail on any warning
@@ -122,15 +122,20 @@ jobs:
 
       # Uploads the SARIF to GitHub Code Scanning. The action itself only
       # stores skillguard.sarif as a workflow artifact for download/debug.
+      # `if: always()` keeps this running when the scan step fails (e.g.
+      # dangerous skills found) — that's when you most want the results.
       - name: Upload SARIF
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: skillguard.sarif
 ```
 
 The action stores `skillguard.sarif` at the workspace root as a workflow
-artifact (for download/debug). The separate `codeql-action/upload-sarif` step
-above is what actually feeds results into GitHub Code Scanning. `use-llm:
+artifact (for download/debug), even when the scan fails. The separate
+`codeql-action/upload-sarif` step above is what actually feeds results into
+GitHub Code Scanning — it needs `if: always()` so a failing scan (e.g.
+dangerous skills found) doesn't skip the upload. `use-llm:
 "true"` installs the `ai` extra and enables LLM review; `SKILLGUARD_SEMANTIC_MODEL`
 must match your provider — without a key in the environment the scan still runs
 with the deterministic engines only.

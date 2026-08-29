@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.7 (2026-08-29)
+
+### Changed
+- GitHub Action: SARIF artifact upload now tolerates a missing file (`if-no-files-found: ignore`) so a crashed scan doesn't fail the upload step.
+- README GitHub Action example: `codeql-action/upload-sarif` step now uses `if: always()` so Code Scanning still gets results when the scan step fails.
+
 ## v0.1.6 (2026-08-29)
 
 ### Added

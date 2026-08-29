@@ -40,3 +40,10 @@ def test_action_scan_step_reports_verdict_and_error_annotation():
     scan_step = next(s for s in manifest["runs"]["steps"] if s.get("id") == "scan")
     assert "::error::" in scan_step["run"]
     assert 'echo "verdict=$verdict" >> "$GITHUB_OUTPUT"' in scan_step["run"]
+
+
+def test_action_upload_step_runs_always_and_guards_missing_sarif():
+    manifest = load_manifest()
+    upload_step = next(s for s in manifest["runs"]["steps"] if s.get("id") == "upload-sarif")
+    assert upload_step["if"] == "always()"
+    assert "hashFiles" in upload_step["if"] or "if-no-files-found" in upload_step.get("with", {})
