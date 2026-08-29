@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.3 (2026-08-29)
+
+### Fixed
+- SARIF output now always includes a `locations` entry per result, with URIs relativized against the scan root (repo root in CI), so GitHub code scanning accepts the uploaded file. Findings without a file path fall back to `SKILL.md`.
+
 ## v0.1.2 (2026-08-28)
 
 ### Added

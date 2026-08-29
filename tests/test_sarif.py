@@ -35,3 +35,36 @@ def test_sarif_empty_findings():
     report.findings = []
     sarif = to_sarif(report)
     assert sarif["runs"][0]["results"] == []
+
+
+def test_result_without_file_path_still_has_location():
+    sarif = to_sarif(make_report())
+    results = sarif["runs"][0]["results"]
+    no_path = next(r for r in results if r["ruleId"] == "stub/L1")
+    assert no_path["locations"] == [
+        {"physicalLocation": {"artifactLocation": {"uri": "SKILL.md"}}}
+    ]
+
+
+def test_uri_is_relative_to_scan_root(tmp_path):
+    (tmp_path / "evil-skill").mkdir()
+    report = make_report()
+    report.origin = "local"
+    report.source_url = str(tmp_path / "evil-skill")
+    sarif = to_sarif(report, scan_root=tmp_path)
+    results = sarif["runs"][0]["results"]
+    uris = {r["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] for r in results}
+    assert uris == {"evil-skill/SKILL.md"}
+
+
+def test_absolute_file_path_is_relativized(tmp_path):
+    skill_dir = tmp_path / "evil-skill"
+    skill_dir.mkdir()
+    report = make_report()
+    report.origin = "local"
+    report.source_url = str(skill_dir)
+    report.findings[0].file_path = str(skill_dir / "scripts" / "run.sh")
+    sarif = to_sarif(report, scan_root=tmp_path)
+    results = sarif["runs"][0]["results"]
+    uri = results[0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+    assert uri == "evil-skill/scripts/run.sh"
