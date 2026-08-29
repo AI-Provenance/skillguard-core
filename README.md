@@ -43,7 +43,7 @@ uv tool install git+https://github.com/cisco-ai-defense/skill-scanner.git
 
 # CLI
 pipx install skillguard-core                          # from PyPI (once published)
-pipx install "git+https://github.com/AI-Provenance/skillguard-core.git@v0.1.4"  # from git
+pipx install "git+https://github.com/AI-Provenance/skillguard-core.git@v0.1.5"  # from git
 ```
 
 For LLM review, install with the `ai` extra:
@@ -102,7 +102,7 @@ jobs:
           pipx install git+https://github.com/NVIDIA/skillspector.git
           pipx install git+https://github.com/cisco-ai-defense/skill-scanner.git
 
-      - uses: AI-Provenance/skillguard-core@v0.1.4
+      - uses: AI-Provenance/skillguard-core@v0.1.5
         with:
           path: skills/
           fail-on: dangerous    # or "caution" to fail on any warning
@@ -112,20 +112,28 @@ jobs:
           # Bring your own key — never pass secrets as `with:` inputs.
           # Anthropic:
           SKILLGUARD_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Model used for LLM review — always match it to your provider
+          # (the Anthropic default is claude-sonnet-4-5):
+          SKILLGUARD_SEMANTIC_MODEL: claude-sonnet-4-5
           # or any OpenAI-compatible provider:
           # SKILLGUARD_LLM_API_KEY: ${{ secrets.SKILLGUARD_LLM_API_KEY }}
           # SKILLGUARD_LLM_BASE_URL: https://api.groq.com/openai/v1
+          # SKILLGUARD_SEMANTIC_MODEL: llama-3.3-70b
 
+      # Uploads the SARIF to GitHub Code Scanning. The action itself only
+      # stores skillguard.sarif as a workflow artifact for download/debug.
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: skillguard.sarif
 ```
 
-The action outputs `skillguard.sarif` at the workspace root, compatible with
-GitHub Code Scanning. `use-llm: "true"` installs the `ai` extra and enables LLM
-review; without a key in the environment the scan still runs with the
-deterministic engines only.
+The action stores `skillguard.sarif` at the workspace root as a workflow
+artifact (for download/debug). The separate `codeql-action/upload-sarif` step
+above is what actually feeds results into GitHub Code Scanning. `use-llm:
+"true"` installs the `ai` extra and enables LLM review; `SKILLGUARD_SEMANTIC_MODEL`
+must match your provider — without a key in the environment the scan still runs
+with the deterministic engines only.
 
 ## Development
 
