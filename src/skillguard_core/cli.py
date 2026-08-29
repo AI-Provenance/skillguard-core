@@ -87,6 +87,7 @@ def scan(
             if json_output:
                 typer.echo(json.dumps([asdict(r) for r in reports], indent=2))
             else:
+                _print_summary(reports, err=True)
                 typer.echo(json.dumps(to_sarif_batch(reports), indent=2))
             raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
@@ -153,18 +154,18 @@ def _try_get_reviewer(use_llm: bool):
         raise typer.Exit(3)
 
 
-def _print_summary(reports: list[ScanReport]):
+def _print_summary(reports: list[ScanReport], err: bool = False):
     verdict_colors = {"dangerous": typer.colors.RED, "caution": typer.colors.YELLOW, "safe": typer.colors.GREEN}
     verdicts = Counter(r.verdict for r in reports)
     total = len(reports)
-    typer.echo()
+    typer.echo(err=err)
     for verdict in ("dangerous", "caution", "safe"):
         count = verdicts.get(verdict, 0)
         if count:
             color = verdict_colors.get(verdict)
-            typer.secho(f"  {verdict.upper():<12} {count:>3}/{total}", fg=color)
-    typer.echo(f"  {'total':<12} {total:>3}")
-    typer.echo()
+            typer.secho(f"  {verdict.upper():<12} {count:>3}/{total}", fg=color, err=err)
+    typer.echo(f"  {'total':<12} {total:>3}", err=err)
+    typer.echo(err=err)
     for r in sorted(reports, key=lambda r: (EXIT_CODES.get(r.verdict, 99), r.skill_name)):
         tag = _verdict_tag(r.verdict)
-        typer.secho(f"  {tag} {r.skill_name} (score {r.fused_score})", fg=verdict_colors.get(r.verdict))
+        typer.secho(f"  {tag} {r.skill_name} (score {r.fused_score})", fg=verdict_colors.get(r.verdict), err=err)
