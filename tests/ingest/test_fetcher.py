@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from skillguard_core.ingest.fetcher import IngestLimitExceeded, content_hash, fetch
+from skillguard_core.ingest.fetcher import IngestLimitExceeded, content_hash, discover_skills, fetch
 
 
 def make_zip_bytes(files: dict[str, str]) -> bytes:
@@ -70,3 +70,32 @@ def test_content_hash_is_stable_and_path_sensitive(tmp_path):
     assert h1 == h2
     (tmp_path / "a.txt").write_text("changed")
     assert content_hash(tmp_path) != h1
+
+
+def test_discover_skills_root_is_single_skill(tmp_path):
+    (tmp_path / "SKILL.md").write_text("# root skill")
+    skills = discover_skills(tmp_path)
+    assert [s.path for s in skills] == [tmp_path]
+
+
+def test_discover_skills_recursive(tmp_path):
+    (tmp_path / "a" / "skills" / "one").mkdir(parents=True)
+    (tmp_path / "a" / "skills" / "one" / "SKILL.md").write_text("# one")
+    (tmp_path / "b").mkdir()
+    (tmp_path / "b" / "SKILL.md").write_text("# b")
+    (tmp_path / "docs").mkdir()
+    skills = discover_skills(tmp_path)
+    assert [s.path for s in skills] == sorted([tmp_path / "a" / "skills" / "one", tmp_path / "b"])
+
+
+def test_discover_skills_empty(tmp_path):
+    (tmp_path / "README.md").write_text("# no skills")
+    assert discover_skills(tmp_path) == []
+
+
+def test_discover_skills_root_wins_over_nested(tmp_path):
+    (tmp_path / "SKILL.md").write_text("# root")
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "SKILL.md").write_text("# nested")
+    skills = discover_skills(tmp_path)
+    assert [s.path for s in skills] == [tmp_path]

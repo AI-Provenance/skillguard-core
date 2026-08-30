@@ -67,13 +67,9 @@ def discover_skills(root: Path) -> list[Fetched]:
     root = root.expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"not a directory: {root}")
-    subdirs = sorted(
-        d for d in root.iterdir() if d.is_dir() and (d / "SKILL.md").exists()
-    )
     if (root / "SKILL.md").exists():
-        subdirs.insert(0, root)
-    if not subdirs:
-        raise FileNotFoundError(f"no SKILL.md found in '{root}'")
+        return [Fetched(path=root, origin="local", source_url=str(root), version_ref="")]
+    subdirs = sorted({p.parent for p in root.rglob("SKILL.md") if p.is_file()})
     return [
         Fetched(path=d, origin="local", source_url=str(d), version_ref="")
         for d in subdirs
