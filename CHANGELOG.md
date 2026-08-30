@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.8 (2026-08-30)
+
+### Fixed
+- Scanning a git repo URL now derives the skill name from the repository path (e.g. `owner/repo`, `.git` suffix stripped) instead of the temporary clone directory name (`repo`), so report pages and batch output name multi-repo scans correctly when no `SKILL.md` exists at the repo root.
+
 ## v0.1.7 (2026-08-29)
 
 ### Changed
