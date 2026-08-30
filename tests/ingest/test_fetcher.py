@@ -123,6 +123,7 @@ def test_fetch_github_tree_url_normalizes_and_sets_subpath(tmp_path):
     assert "/tree/" not in " ".join(calls[0])
     assert fetched.origin == "git"
     assert fetched.subpath == "config/skills/my-skill"
+    assert fetched.source_url == "https://github.com/acme/skills"
 
 
 def test_fetch_plain_git_url_has_empty_subpath(tmp_path):
@@ -137,7 +138,10 @@ def test_fetch_plain_git_url_has_empty_subpath(tmp_path):
 
 
 def test_fetch_github_tree_url_root_subpath(tmp_path):
+    calls = []
+
     def runner(cmd, **kwargs):
+        calls.append(cmd)
         if cmd[:2] == ["git", "clone"]:
             subprocess.run(["mkdir", "-p", cmd[-1]], check=True)
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
@@ -147,3 +151,23 @@ def test_fetch_github_tree_url_root_subpath(tmp_path):
         "https://github.com/acme/skills/tree/main", tmp_root=tmp_path, max_bytes=1024, git_runner=runner
     )
     assert fetched.subpath == ""
+    assert "/tree/main" not in " ".join(calls[0])
+    assert "https://github.com/acme/skills" in " ".join(calls[0])
+
+
+def test_fetch_github_tree_url_decodes_subpath(tmp_path):
+    calls = []
+
+    def runner(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[:2] == ["git", "clone"]:
+            subprocess.run(["mkdir", "-p", cmd[-1]], check=True)
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="abc123\n", stderr="")
+
+    fetched = fetch(
+        "https://github.com/acme/skills/tree/main/some%20skill",
+        tmp_root=tmp_path, max_bytes=1024, git_runner=runner,
+    )
+    assert fetched.subpath == "some skill"
+    assert "/tree/" not in " ".join(calls[0])

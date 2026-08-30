@@ -6,7 +6,7 @@ import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import httpx
 
@@ -45,7 +45,7 @@ def fetch(
 ) -> Fetched:
     tmp_root.mkdir(parents=True, exist_ok=True)
     clone_target, subpath = _normalize_github_tree_url(target)
-    if subpath:
+    if clone_target != target:
         target = clone_target
     if "://" not in target and not target.endswith(".git"):
         local = Path(target).expanduser().resolve()
@@ -129,7 +129,7 @@ def _normalize_github_tree_url(target: str) -> tuple[str, str]:
     if len(parts) < 4 or parts[2] != "tree":
         return target, ""
     clone_url = f"{parsed.scheme}://{parsed.netloc}/{parts[0]}/{parts[1]}"
-    subpath = "/".join(parts[4:])
+    subpath = unquote("/".join(parts[4:]))
     return clone_url, subpath
 
 
