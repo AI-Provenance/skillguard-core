@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.9 (2026-08-30)
+
+### Changed
+- Git and zip targets now resolve individual skill directories: each directory containing `SKILL.md` is scanned as its own skill (the repo root counts when it has a `SKILL.md`), files outside skill dirs are ignored, and repos with no skills fail with "no skills found". The CLI reports one result per skill for URL targets.
+- GitHub `/tree/<ref>/<subpath>` URLs are supported: the repo root is cloned and discovery is scoped to the subpath (percent-decoded).
+- Local targets without a root `SKILL.md` are no longer rejected by `fetch()` — skill discovery decides what gets scanned.
+
 ## v0.1.8 (2026-08-30)
 
 ### Fixed
