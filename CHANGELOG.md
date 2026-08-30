@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.10 (2026-08-30)
+
+### Fixed
+- `build_reviewer()` now raises an actionable error ("install with: pipx install skillguard-core[ai]") when the `ai` extra (deepagents) is missing instead of a raw `ModuleNotFoundError`.
+
 ## v0.1.9 (2026-08-30)
 
 ### Changed
