@@ -51,8 +51,6 @@ def fetch(
         local = Path(target).expanduser().resolve()
         if not local.is_dir():
             raise FileNotFoundError(f"not a directory: {target}")
-        if not (local / "SKILL.md").exists():
-            raise FileNotFoundError(f"no SKILL.md found in '{target}'")
         return Fetched(path=local, origin="local", source_url=str(local), version_ref="")
 
     workdir = Path(tempfile.mkdtemp(dir=tmp_root))
