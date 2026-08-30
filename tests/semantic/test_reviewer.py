@@ -52,3 +52,18 @@ def test_reviewer_swallows_agent_errors():
 
     reviewer = build_reviewer(agent=Broken())
     assert reviewer(FIXTURE, []) is None
+
+
+def test_missing_ai_extra_raises_actionable_error(monkeypatch):
+    import sys
+
+    import pytest
+
+    from skillguard_core import config
+
+    monkeypatch.setenv("SKILLGUARD_LLM_API_KEY", "sk-test")
+    config.get_settings.cache_clear()
+    monkeypatch.setitem(sys.modules, "deepagents", None)
+    with pytest.raises(ImportError, match=r"ai' extra"):
+        build_reviewer()
+    config.get_settings.cache_clear()
