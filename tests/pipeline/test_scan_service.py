@@ -2,6 +2,8 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from skillguard_core.engines.base import EngineFinding, EngineResult
 from skillguard_core.pipeline.scan import ScanService, parse_skill_name
 
@@ -178,3 +180,68 @@ def test_scan_directory_parallel_is_faster_than_sequential(tmp_path):
     assert len(reports_par) == 4
     assert {r.skill_name for r in reports_par} == {r.skill_name for r in reports_seq}
     assert elapsed_par < elapsed_seq * 0.6  # at least 40% faster with 4 workers
+
+
+from skillguard_core.ingest.fetcher import Fetched
+
+
+def test_scan_target_multi_scans_each_skill_dir(tmp_path, monkeypatch):
+    from skillguard_core.pipeline import scan as scan_mod
+
+    tree = tmp_path / "tree"
+    (tree / "skills" / "one").mkdir(parents=True)
+    (tree / "skills" / "one" / "SKILL.md").write_text("---\nname: one\n---\n")
+    (tree / "skills" / "two").mkdir()
+    (tree / "skills" / "two" / "SKILL.md").write_text("---\nname: two\n---\n")
+    (tree / "README.md").write_text("# repo")
+
+    fetched = Fetched(path=tree, origin="git", source_url="https://github.com/acme/skills", version_ref="abc")
+
+    def fake_fetch(target, **kwargs):
+        return fetched
+
+    monkeypatch.setattr(scan_mod, "fetch", fake_fetch)
+    monkeypatch.setattr(scan_mod.shutil, "rmtree", lambda *a, **k: None)
+
+    engine = StubEngine(EngineResult(engine="stub", score=87, findings=[make_finding()]))
+    service = ScanService(engines=[engine])
+    reports = service.scan_target_multi("https://github.com/acme/skills", tmp_root=tmp_path)
+    assert sorted(r.skill_name for r in reports) == ["one", "two"]
+    assert sorted(r.source_url for r in reports) == [
+        "https://github.com/acme/skills#skills/one",
+        "https://github.com/acme/skills#skills/two",
+    ]
+    assert engine.calls == 2
+
+
+def test_scan_target_multi_root_skill_is_single(tmp_path, monkeypatch):
+    from skillguard_core.pipeline import scan as scan_mod
+
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "SKILL.md").write_text("---\nname: solo\n---\n")
+    fetched = Fetched(path=tree, origin="git", source_url="https://github.com/acme/solo", version_ref="abc")
+    monkeypatch.setattr(scan_mod, "fetch", lambda target, **kwargs: fetched)
+    monkeypatch.setattr(scan_mod.shutil, "rmtree", lambda *a, **k: None)
+
+    engine = StubEngine(EngineResult(engine="stub", score=5, findings=[]))
+    service = ScanService(engines=[engine])
+    reports = service.scan_target_multi("https://github.com/acme/solo", tmp_root=tmp_path)
+    assert len(reports) == 1
+    assert reports[0].skill_name == "solo"
+    assert reports[0].source_url == "https://github.com/acme/solo"
+
+
+def test_scan_target_multi_no_skills_raises(tmp_path, monkeypatch):
+    from skillguard_core.pipeline import scan as scan_mod
+
+    tree = tmp_path / "tree"
+    tree.mkdir()
+    (tree / "README.md").write_text("# nope")
+    fetched = Fetched(path=tree, origin="git", source_url="https://github.com/acme/nope", version_ref="abc")
+    monkeypatch.setattr(scan_mod, "fetch", lambda target, **kwargs: fetched)
+    monkeypatch.setattr(scan_mod.shutil, "rmtree", lambda *a, **k: None)
+
+    service = ScanService(engines=[])
+    with pytest.raises(ValueError, match="no skills found"):
+        service.scan_target_multi("https://github.com/acme/nope", tmp_root=tmp_path)

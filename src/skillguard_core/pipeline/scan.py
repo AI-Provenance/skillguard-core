@@ -98,6 +98,41 @@ class ScanService:
                 results[idx] = future.result()
         return [results[i] for i in range(len(skill_dirs))]
 
+    def scan_target_multi(
+        self, target: str, *, tmp_root: Path | None = None, use_llm: bool = False, max_workers: int = 1
+    ) -> list[ScanReport]:
+        settings = get_settings()
+        tmp_root = tmp_root or Path(tempfile.gettempdir()) / "skillguard"
+        fetched = fetch(
+            target,
+            tmp_root=tmp_root,
+            max_bytes=settings.ingest_max_bytes,
+            max_zip_members=settings.ingest_max_zip_members,
+        )
+        try:
+            root = fetched.path / fetched.subpath if fetched.subpath else fetched.path
+            skill_dirs = discover_skills(root)
+            if not skill_dirs:
+                raise ValueError(f"no skills found in {target}")
+            jobs: list[Fetched] = []
+            for d in skill_dirs:
+                rel = d.path.relative_to(fetched.path).as_posix()
+                source_url = f"{fetched.source_url}#{rel}" if rel and rel != "." else fetched.source_url
+                jobs.append(Fetched(path=d.path, origin=fetched.origin, source_url=source_url, version_ref=fetched.version_ref))
+            if len(jobs) == 1 or max_workers <= 1:
+                return [self.scan_fetched(f, use_llm=use_llm) for f in jobs]
+            results: dict[int, ScanReport] = {}
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {pool.submit(self.scan_fetched, f, use_llm=use_llm): i for i, f in enumerate(jobs)}
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    results[idx] = future.result()
+            return [results[i] for i in range(len(jobs))]
+        finally:
+            if fetched.origin != "local":
+                root = fetched.path.parent if fetched.path.parent != tmp_root else fetched.path
+                shutil.rmtree(root, ignore_errors=True)
+
     def scan_fetched(self, fetched: Fetched, *, use_llm: bool = False) -> ScanReport:
         settings = get_settings()
         started = time.monotonic()
