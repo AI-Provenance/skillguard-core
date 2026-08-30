@@ -99,3 +99,51 @@ def test_discover_skills_root_wins_over_nested(tmp_path):
     (tmp_path / "sub" / "SKILL.md").write_text("# nested")
     skills = discover_skills(tmp_path)
     assert [s.path for s in skills] == [tmp_path]
+
+
+def test_fetch_github_tree_url_normalizes_and_sets_subpath(tmp_path):
+    calls = []
+
+    def runner(cmd, **kwargs):
+        calls.append(cmd)
+        if cmd[:2] == ["git", "clone"]:
+            dest = cmd[-1]
+            subprocess.run(["mkdir", "-p", dest], check=True)
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="abc123\n", stderr="")
+
+    fetched = fetch(
+        "https://github.com/acme/skills/tree/main/config/skills/my-skill",
+        tmp_root=tmp_path, max_bytes=1024, git_runner=runner,
+    )
+    assert calls[0][0] == "git"
+    assert calls[0][1] == "clone"
+    assert calls[0][-1].endswith("repo")
+    assert "https://github.com/acme/skills" in " ".join(calls[0])
+    assert "/tree/" not in " ".join(calls[0])
+    assert fetched.origin == "git"
+    assert fetched.subpath == "config/skills/my-skill"
+
+
+def test_fetch_plain_git_url_has_empty_subpath(tmp_path):
+    def runner(cmd, **kwargs):
+        if cmd[:2] == ["git", "clone"]:
+            subprocess.run(["mkdir", "-p", cmd[-1]], check=True)
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="abc123\n", stderr="")
+
+    fetched = fetch("https://github.com/acme/skills.git", tmp_root=tmp_path, max_bytes=1024, git_runner=runner)
+    assert fetched.subpath == ""
+
+
+def test_fetch_github_tree_url_root_subpath(tmp_path):
+    def runner(cmd, **kwargs):
+        if cmd[:2] == ["git", "clone"]:
+            subprocess.run(["mkdir", "-p", cmd[-1]], check=True)
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="abc123\n", stderr="")
+
+    fetched = fetch(
+        "https://github.com/acme/skills/tree/main", tmp_root=tmp_path, max_bytes=1024, git_runner=runner
+    )
+    assert fetched.subpath == ""
