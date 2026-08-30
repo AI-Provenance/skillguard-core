@@ -111,12 +111,20 @@ def scan(
         raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
     try:
-        report = service.scan_target(target, use_llm=use_llm)
+        reports = service.scan_target_multi(target, use_llm=use_llm, max_workers=workers)
     except Exception as exc:  # noqa: BLE001
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(3)
-    typer.echo(_format_report(report, json_output, sarif))
-    raise typer.Exit(EXIT_CODES.get(report.verdict, 3))
+    if len(reports) == 1:
+        typer.echo(_format_report(reports[0], json_output, sarif))
+        raise typer.Exit(EXIT_CODES.get(reports[0].verdict, 3))
+    if json_output:
+        typer.echo(json.dumps([asdict(r) for r in reports], indent=2))
+    elif sarif:
+        typer.echo(json.dumps(to_sarif_batch(reports), indent=2))
+    else:
+        _print_summary(reports)
+    raise typer.Exit(max(EXIT_CODES.get(r.verdict, 0) for r in reports))
 
 
 def _safe_scan(future, d) -> ScanReport:

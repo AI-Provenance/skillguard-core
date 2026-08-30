@@ -22,6 +22,13 @@ class StubEngine:
         )
 
 
+def safe_report(name: str):
+    return ScanReport(
+        skill_name=name, origin="git", source_url=f"https://x/{name}", version_ref="abc",
+        content_hash="h", engines=["stub"], fused_score=5, severity="low", verdict="safe",
+    )
+
+
 def test_scan_json_output(monkeypatch):
     monkeypatch.setattr(cli, "_engines", lambda: [StubEngine()])
     result = runner.invoke(cli.app, ["scan", str(FIXTURE), "--json"])
@@ -155,3 +162,35 @@ def test_summary_shows_llm_skipped_reason(monkeypatch, tmp_path):
     result = runner.invoke(cli.app, ["scan", str(tmp_path / "skills"), "--sarif"])
     assert result.exit_code == 1
     assert "[info] llm skipped: no reviewer" in result.stderr
+
+
+class MultiTargetService:
+    def __init__(self, reports):
+        self._reports = reports
+        self.kwargs = None
+
+    def scan_target_multi(self, target, *, tmp_root=None, use_llm=False, max_workers=1):
+        self.kwargs = {"target": target, "use_llm": use_llm, "max_workers": max_workers}
+        return self._reports
+
+
+def test_scan_url_uses_multi_flow_json_list(monkeypatch):
+    reports = [safe_report("one"), safe_report("two")]
+    service = MultiTargetService(reports)
+    monkeypatch.setattr(cli, "ScanService", lambda engines, reviewer: service)
+    monkeypatch.setattr(cli, "_engines", list)
+    result = runner.invoke(cli.app, ["scan", "https://github.com/acme/skills", "--json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert [r["skill_name"] for r in payload] == ["one", "two"]
+    assert service.kwargs["max_workers"] >= 1
+
+
+def test_scan_url_single_skill_keeps_dict_output(monkeypatch):
+    service = MultiTargetService([safe_report("solo")])
+    monkeypatch.setattr(cli, "ScanService", lambda engines, reviewer: service)
+    monkeypatch.setattr(cli, "_engines", list)
+    result = runner.invoke(cli.app, ["scan", "https://github.com/acme/solo", "--json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["skill_name"] == "solo"
