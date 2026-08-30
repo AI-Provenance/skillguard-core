@@ -6,6 +6,7 @@ import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 
@@ -20,6 +21,7 @@ class Fetched:
     origin: str
     source_url: str
     version_ref: str
+    subpath: str = ""
 
 
 def content_hash(root: Path) -> str:
@@ -42,6 +44,9 @@ def fetch(
     timeout_s: int = 120,
 ) -> Fetched:
     tmp_root.mkdir(parents=True, exist_ok=True)
+    clone_target, subpath = _normalize_github_tree_url(target)
+    if subpath:
+        target = clone_target
     if "://" not in target and not target.endswith(".git"):
         local = Path(target).expanduser().resolve()
         if not local.is_dir():
@@ -59,7 +64,7 @@ def fetch(
 
     version_ref = _git_clone(target, workdir, git_runner, timeout_s)
     return Fetched(
-        path=workdir / "repo", origin="git", source_url=target, version_ref=version_ref
+        path=workdir / "repo", origin="git", source_url=clone_target, version_ref=version_ref, subpath=subpath
     )
 
 
@@ -114,6 +119,18 @@ def _download_zip(
     finally:
         if own_client:
             client.close()
+
+
+def _normalize_github_tree_url(target: str) -> tuple[str, str]:
+    parsed = urlparse(target)
+    if parsed.netloc not in ("github.com", "www.github.com") or parsed.scheme not in ("http", "https"):
+        return target, ""
+    parts = [p for p in parsed.path.split("/") if p]
+    if len(parts) < 4 or parts[2] != "tree":
+        return target, ""
+    clone_url = f"{parsed.scheme}://{parsed.netloc}/{parts[0]}/{parts[1]}"
+    subpath = "/".join(parts[4:])
+    return clone_url, subpath
 
 
 def _git_clone(
