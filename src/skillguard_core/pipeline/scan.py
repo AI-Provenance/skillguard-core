@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from urllib.parse import urlparse
 
 from skillguard_core.config import get_settings
 from skillguard_core.engines.fusion import fuse
@@ -46,14 +47,22 @@ class ScanReport:
     duration_ms: int = 0
 
 
-def parse_skill_name(path: Path) -> str:
+def parse_skill_name(path: Path, fallback: str = "") -> str:
     skill_md = path / "SKILL.md"
     if skill_md.exists():
         text = skill_md.read_text(errors="replace")[:4000]
         match = re.search(r"^name:\s*(.+)$", text, re.MULTILINE)
         if match:
             return match.group(1).strip()
-    return path.name
+    return fallback or path.name
+
+
+def _repo_name_from_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return ""
+    path = parsed.path.strip("/").removesuffix(".git")
+    return path
 
 
 class ScanService:
@@ -130,8 +139,9 @@ class ScanService:
             for r in results
             for f in r.findings
         ]
+        fallback = _repo_name_from_url(fetched.source_url) if fetched.origin == "git" else ""
         return ScanReport(
-            skill_name=parse_skill_name(fetched.path),
+            skill_name=parse_skill_name(fetched.path, fallback),
             origin=fetched.origin,
             source_url=fetched.source_url,
             version_ref=fetched.version_ref,

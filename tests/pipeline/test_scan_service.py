@@ -3,7 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from skillguard_core.engines.base import EngineFinding, EngineResult
-from skillguard_core.pipeline.scan import ScanService
+from skillguard_core.pipeline.scan import ScanService, parse_skill_name
 
 FIXTURE = Path(__file__).parent.parent / "fixtures" / "malicious-skill"
 
@@ -22,6 +22,51 @@ class StubEngine:
 
 def make_finding() -> EngineFinding:
     return EngineFinding(engine="stub", rule_id="EX1", category="data_exfiltration", title="Exfil", severity="high", fingerprint="fp1")
+
+
+def test_parse_skill_name_prefers_frontmatter_over_fallback(tmp_path):
+    assert parse_skill_name(FIXTURE, fallback="owner/repo") == "free-gpt-booster"
+
+
+def test_parse_skill_name_uses_fallback_without_skill_md(tmp_path):
+    assert parse_skill_name(tmp_path, fallback="owner/repo") == "owner/repo"
+
+
+def test_parse_skill_name_falls_back_to_dir_name(tmp_path):
+    assert parse_skill_name(tmp_path) == tmp_path.name
+
+
+def test_scan_fetched_git_origin_derives_name_from_url(tmp_path):
+    skill_dir = tmp_path / "skill"
+    skill_dir.mkdir()
+    (skill_dir / "helper.sh").write_text("echo hi")
+    engine = StubEngine(EngineResult(engine="stub", score=5, findings=[]))
+    service = ScanService(engines=[engine])
+    from skillguard_core.ingest.fetcher import Fetched
+
+    fetched = Fetched(
+        path=skill_dir,
+        origin="git",
+        source_url="https://github.com/langchain-ai/langsmith-skills",
+        version_ref="abc123",
+    )
+    report = service.scan_fetched(fetched)
+    assert report.skill_name == "langchain-ai/langsmith-skills"
+
+
+def test_scan_fetched_git_origin_strips_git_suffix(tmp_path):
+    engine = StubEngine(EngineResult(engine="stub", score=5, findings=[]))
+    service = ScanService(engines=[engine])
+    from skillguard_core.ingest.fetcher import Fetched
+
+    fetched = Fetched(
+        path=tmp_path,
+        origin="git",
+        source_url="https://github.com/owner/my-skill.git",
+        version_ref="abc123",
+    )
+    report = service.scan_fetched(fetched)
+    assert report.skill_name == "owner/my-skill"
 
 
 def test_scan_target_returns_report(tmp_path):
