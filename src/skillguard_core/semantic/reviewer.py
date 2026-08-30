@@ -74,12 +74,17 @@ def _parse_json_response(content: str) -> ReviewDecision | None:
 
 
 def _make_agent(model_name: str, api_key: str, base_url: str = ""):
-    from deepagents import (
-        GeneralPurposeSubagentProfile,
-        HarnessProfile,
-        create_deep_agent,
-        register_harness_profile,
-    )
+    try:
+        from deepagents import (
+            GeneralPurposeSubagentProfile,
+            HarnessProfile,
+            create_deep_agent,
+            register_harness_profile,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            "LLM review requires the 'ai' extra — install with: pipx install skillguard-core[ai]"
+        ) from exc
 
     slim_profile = HarnessProfile(
         general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
