@@ -4,8 +4,7 @@ Security scanner for AI agent skills. Wraps NVIDIA SkillSpector and Cisco
 skill-scanner, fuses their findings into a verdict, and reports via JSON,
 SARIF, or CI exit codes. Apache-2.0.
 
-Part of SkillGuard — continuous trust for AI agent skills. Hosted drift
-monitoring and CI policy live at skillguard.dev.
+Part of SkillGuard — continuous trust for AI agent skills.
 
 ## How it works
 
